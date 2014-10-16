@@ -31,14 +31,14 @@ void generatePoints(const DepthPixel* depth, const int width, const int height, 
 	auto cY = 1.0f / fy;
 	for (int i = 0; i < height; i++) {
 		for (int j = 0; j < width; j++) {
-			const auto z = depth[i];
-			points[3 * i] =		(j - halfX)*z*cX;
-			points[3 * i + 1] = (halfY - i)*z*cY;
-			points[3 * i + 2] = z;
+			const auto z = depth[(i*width + j)];
+			points[3 * (i*width+j)]		= (j - halfX)*z*cX;
+			points[3 * (i*width+j) + 1] = (i-halfY)*z*cY;
+			points[3 * (i*width+j) + 2] = z;
 		}
 	}
 }
-
+// cX*((5*z +j*(z-z2));
 inline void cross(const float* a, const float *b, float *c)
 {
 	c[0] = (a[1] * b[2]) - (a[2] * b[1]);
@@ -61,7 +61,24 @@ template <int size>
 void generateNormals(const float* points, const int width, const int height, float* normals)
 {
 	for (int i = size; i < height - size; i++) {
-		for (int j = size; j < width-size; j++) {
+		for (int j = size; j < width - size; j++) {
+			if (!points[3 * (i*width + j) + 2])		continue;
+			if (!points[3 * (i*width + j + size) + 2])	continue;
+			if (!points[3 * ((i + size)*width + j) + 2])	continue;
+		
+			const float* pc = &points[3 * (i*width + j)];
+			const float* px = &points[3 * (i*width + j + size)];
+			const float* py = &points[3 * ((i + size)*width + j)];
+
+			float v1[] = { px[0] - pc[0], px[1] - pc[1], px[2] - pc[2] };
+			float v2[] = { py[0] - pc[0], py[1] - pc[1], py[2] - pc[2] };
+			
+			float v3[3];
+			cross(v1, v2, v3);
+			normalize(v3);
+			normals[3 * (i*width + j)] = v3[0];
+			normals[3 * (i*width + j) + 1] = v3[1];
+			normals[3 * (i*width + j) + 2] = v3[2];
 		}
 	}
 }
@@ -94,6 +111,8 @@ void generateNormals(const DepthPixel* depth, const int width, const int height,
 			//const float v1[] = { cX*(size*xDepth), 0, diffXZ };
 			//const float v2[] = { 0, cY*(size*yDepth), diffYZ };
 			//float v3[] = { -diffXZ*yStep*yDepth, -xStep*diffYZ*xDepth, xyStep*xDepth*yDepth };
+
+			// cX*(5*z +j*(z-z2));
 			const float v1[] = { cX*(size*xDepth+(j-halfX)*diffXZ), 0, diffXZ };
 			const float v2[] = { 0, cY*(size*yDepth + (halfY - i)*diffYZ), diffYZ };
 			float v3[] = { -v1[2] * v2[1], -v1[0] * v2[2], v1[0] * v2[1] };
@@ -176,6 +195,8 @@ int main(int argc, char *args[]){
 	while (true)
 	{
 		memset(normals.data(), 0, sizeof(float)*width*height * 3);
+		memset(points.data(), 0, sizeof(float)*width*height * 3);
+
 		int changedStreamDummy;
 		VideoStream* pStream = &depth;
 		rc = OpenNI::waitForAnyStream (&pStream, 1, &changedStreamDummy, 2000);
@@ -200,7 +221,9 @@ int main(int argc, char *args[]){
 
 		DepthPixel* pDepth = (DepthPixel*)frame.getData();
 		drawGrayScale(depthFrameSur, pDepth);
-		generatePoints(pDepth, width, height, fx, fy, points.data());
+		//generatePoints(pDepth, width, height, fx, fy, points.data());
+		//generateNormals<5>(points.data(), width, height, normals.data());
+
 		generateNormals<5>(pDepth, width, height, fx, fy, normals.data());
 		drawNormals(normsFrameSur, normals.data());
 		//memcpy(depthFrameSur->pixels, (void*)pDepth, 320 * 240 * sizeof(DepthPixel));
