@@ -63,22 +63,75 @@ void generateNormals(const float* points, const int width, const int height, flo
 	for (int i = size; i < height - size; i++) {
 		for (int j = size; j < width - size; j++) {
 			if (!points[3 * (i*width + j) + 2])		continue;
-			if (!points[3 * (i*width + j + size) + 2])	continue;
-			if (!points[3 * ((i + size)*width + j) + 2])	continue;
-		
 			const float* pc = &points[3 * (i*width + j)];
-			const float* px = &points[3 * (i*width + j + size)];
-			const float* py = &points[3 * ((i + size)*width + j)];
 
-			float v1[] = { px[0] - pc[0], px[1] - pc[1], px[2] - pc[2] };
-			float v2[] = { py[0] - pc[0], py[1] - pc[1], py[2] - pc[2] };
-			
-			float v3[3];
-			cross(v1, v2, v3);
-			normalize(v3);
-			normals[3 * (i*width + j)] = v3[0];
-			normals[3 * (i*width + j) + 1] = v3[1];
-			normals[3 * (i*width + j) + 2] = v3[2];
+			float outNorm[3] = { 0, 0, 0 };
+			int count = 0;
+			if (points[3 * (i*width + j + size) + 2] && points[3 * ((i + size)*width + j) + 2]){
+				const float* px = &points[3 * (i*width + j + size)];
+				const float* py = &points[3 * ((i + size)*width + j)];
+
+				float v1[] = { px[0] - pc[0], px[1] - pc[1], px[2] - pc[2] };
+				float v2[] = { py[0] - pc[0], py[1] - pc[1], py[2] - pc[2] };
+
+				float v3[3];
+				cross(v1, v2, v3);
+				normalize(v3);
+				outNorm[0] += v3[0];
+				outNorm[1] += v3[1];
+				outNorm[2] += v3[2];
+				count++;
+			}
+			if (points[3 * (i*width + j - size) + 2] && points[3 * ((i + size)*width + j) + 2]){
+				const float* px = &points[3 * (i*width + j - size)];
+				const float* py = &points[3 * ((i + size)*width + j)];
+
+				float v1[] = { pc[0] - px[0], pc[1] - px[1], pc[2] - px[2] };
+				float v2[] = { py[0] - pc[0], py[1] - pc[1], py[2] - pc[2] };
+
+				float v3[3];
+				cross(v1, v2, v3);
+				normalize(v3);
+				outNorm[0] += v3[0];
+				outNorm[1] += v3[1];
+				outNorm[2] += v3[2];
+				count++;
+			}
+			if (points[3 * (i*width + j + size) + 2] && points[3 * ((i - size)*width + j) + 2]){
+				const float* px = &points[3 * (i*width + j + size)];
+				const float* py = &points[3 * ((i - size)*width + j)];
+
+				float v1[] = { px[0] - pc[0], px[1] - pc[1], px[2] - pc[2] };
+				float v2[] = { pc[0] - py[0], pc[1] - py[1], pc[2] - py[2] };
+
+				float v3[3];
+				cross(v1, v2, v3);
+				normalize(v3);
+				outNorm[0] += v3[0];
+				outNorm[1] += v3[1];
+				outNorm[2] += v3[2];
+				count++;
+			}
+			if (points[3 * (i*width + j - size) + 2] && points[3 * ((i - size)*width + j) + 2]){
+				const float* px = &points[3 * (i*width + j - size)];
+				const float* py = &points[3 * ((i - size)*width + j)];
+
+				float v1[] = { pc[0] - px[0], pc[1] - px[1], pc[2] - px[2] };
+				float v2[] = { pc[0] - py[0], pc[1] - py[1], pc[2] - py[2] };
+
+				float v3[3];
+				cross(v1, v2, v3);
+				normalize(v3);
+				outNorm[0] += v3[0];
+				outNorm[1] += v3[1];
+				outNorm[2] += v3[2];
+				count++;
+			}
+			if (count) {
+				normals[3 * (i*width + j)] = outNorm[0] / count;
+				normals[3 * (i*width + j) + 1] = outNorm[1] / count;
+				normals[3 * (i*width + j) + 2] = outNorm[2] / count;
+			}
 		}
 	}
 }
@@ -96,30 +149,84 @@ void generateNormals(const DepthPixel* depth, const int width, const int height,
 	for (int i = size; i < height - size; i++) {
 		for (int j = size; j < width - size; j++) {
 			if (!depth[i*width + j])		continue;
-			if (!depth[i*width + j+size])	continue;
-			if (!depth[(i+size)*width + j])	continue;
 			const auto cDepth = depth[i*width + j];
-			const auto xDepth = depth[i*width + j + size];
-			const auto yDepth = depth[(i + size)*width + j];
-			const auto diffXZ = xDepth - cDepth;
-			const auto diffYZ = yDepth - cDepth;
 
-			//const float v1[] = { xStep, 0, diffXZ };
-			//const float v2[] = { 0, yStep, diffYZ };
-			//float v3[] = { -diffXZ*yStep, -xStep*diffYZ, xyStep };
+			float outNorm[3] = { 0, 0, 0 };
+			int count = 0;
 
-			//const float v1[] = { cX*(size*xDepth), 0, diffXZ };
-			//const float v2[] = { 0, cY*(size*yDepth), diffYZ };
-			//float v3[] = { -diffXZ*yStep*yDepth, -xStep*diffYZ*xDepth, xyStep*xDepth*yDepth };
+			if (depth[i*width + j+size] && depth[(i + size)*width + j])
+			{
+				const auto xDepth = depth[i*width + j + size];
+				const auto yDepth = depth[(i + size)*width + j];
+				const auto diffXZ = xDepth - cDepth;
+				const auto diffYZ = yDepth - cDepth;
 
-			// cX*(5*z +j*(z-z2));
-			const float v1[] = { cX*(size*xDepth+(j-halfX)*diffXZ), 0, diffXZ };
-			const float v2[] = { 0, cY*(size*yDepth + (halfY - i)*diffYZ), diffYZ };
-			float v3[] = { -v1[2] * v2[1], -v1[0] * v2[2], v1[0] * v2[1] };
-			normalize(v3);
-			normals[3 * (i*width + j)]	 = v3[0];
-			normals[3 * (i*width + j)+1] = v3[1];
-			normals[3 * (i*width + j)+2] = v3[2];
+				// cX*(5*z +j*(z-z2));
+				const float v1[] = { cX*(size*xDepth + (j - halfX)*diffXZ), 0, diffXZ };
+				const float v2[] = { 0, cY*(size*yDepth + (halfY - i)*diffYZ), diffYZ };
+				float v3[] = { -v1[2] * v2[1], -v1[0] * v2[2], v1[0] * v2[1] };
+				normalize(v3);
+				outNorm[0] += v3[0];
+				outNorm[1] += v3[1];
+				outNorm[2] += v3[2];
+				count++;
+			}
+			if (depth[i*width + j - size] && depth[(i + size)*width + j])
+			{
+				const auto xDepth = depth[i*width + j - size];
+				const auto yDepth = depth[(i + size)*width + j];
+				const auto diffXZ = cDepth - xDepth;
+				const auto diffYZ = yDepth - cDepth;
+
+				// cX*(5*z +j*(z-z2));
+				const float v1[] = { cX*(size*xDepth + (j - halfX)*diffXZ), 0, diffXZ };
+				const float v2[] = { 0, cY*(size*yDepth + (halfY - i)*diffYZ), diffYZ };
+				float v3[] = { -v1[2] * v2[1], -v1[0] * v2[2], v1[0] * v2[1] };
+				normalize(v3);
+				outNorm[0] += v3[0];
+				outNorm[1] += v3[1];
+				outNorm[2] += v3[2];
+				count++;
+			}
+			if (depth[i*width + j + size] && depth[(i - size)*width + j])
+			{
+				const auto xDepth = depth[i*width + j + size];
+				const auto yDepth = depth[(i - size)*width + j];
+				const auto diffXZ = xDepth - cDepth;
+				const auto diffYZ = cDepth - yDepth;
+
+				// cX*(5*z +j*(z-z2));
+				const float v1[] = { cX*(size*xDepth + (j - halfX)*diffXZ), 0, diffXZ };
+				const float v2[] = { 0, cY*(size*yDepth + (halfY - i)*diffYZ), diffYZ };
+				float v3[] = { -v1[2] * v2[1], -v1[0] * v2[2], v1[0] * v2[1] };
+				normalize(v3);
+				outNorm[0] += v3[0];
+				outNorm[1] += v3[1];
+				outNorm[2] += v3[2];
+				count++;
+			}
+			if (depth[i*width + j - size] && depth[(i - size)*width + j])
+			{
+				const auto xDepth = depth[i*width + j - size];
+				const auto yDepth = depth[(i - size)*width + j];
+				const auto diffXZ = cDepth - xDepth;
+				const auto diffYZ = cDepth - yDepth;
+
+				// cX*(5*z +j*(z-z2));
+				const float v1[] = { cX*(size*xDepth + (j - halfX)*diffXZ), 0, diffXZ };
+				const float v2[] = { 0, cY*(size*yDepth + (halfY - i)*diffYZ), diffYZ };
+				float v3[] = { -v1[2] * v2[1], -v1[0] * v2[2], v1[0] * v2[1] };
+				normalize(v3);
+				outNorm[0] += v3[0];
+				outNorm[1] += v3[1];
+				outNorm[2] += v3[2];
+				count++;
+			}
+			if (count) {
+				normals[3 * (i*width + j)] = outNorm[0] / count;
+				normals[3 * (i*width + j) + 1] = outNorm[1] / count;
+				normals[3 * (i*width + j) + 2] = outNorm[2] / count;
+			}
 		}
 	}
 }
@@ -222,9 +329,10 @@ int main(int argc, char *args[]){
 		DepthPixel* pDepth = (DepthPixel*)frame.getData();
 		drawGrayScale(depthFrameSur, pDepth);
 		//generatePoints(pDepth, width, height, fx, fy, points.data());
-		//generateNormals<5>(points.data(), width, height, normals.data());
 
-		generateNormals<5>(pDepth, width, height, fx, fy, normals.data());
+		//generateNormals<2>(points.data(), width, height, normals.data());
+		generateNormals<2>(pDepth, width, height, fx, fy, normals.data());
+
 		drawNormals(normsFrameSur, normals.data());
 		//memcpy(depthFrameSur->pixels, (void*)pDepth, 320 * 240 * sizeof(DepthPixel));
 		int middleIndex = (frame.getHeight() + 1)*frame.getWidth() / 2;
