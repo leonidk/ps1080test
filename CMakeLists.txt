@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 2.6)
 project(PS1080Test)
+if(UNIX)
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11")
+endif()
 
 # Use our modified FindSDL2* modules
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PS1080Test_SOURCE_DIR}/cmake")
