@@ -5,11 +5,16 @@
 #include <vector>
 using namespace openni;
 
-template <typename T>
-void drawGrayScale(SDL_Surface* sur, T * data) {
+void drawGrayScale(SDL_Surface* sur, DepthPixel * data) {
 	uint8_t* dest = (uint8_t*)sur->pixels;
 	for (int i = 0; i < sur->h*sur->w; i++)
-		dest[4 * i + 2] = dest[4 * i + 1] = dest[4 * i] = (data[i] >> 4) > 255 ? 255 : (data[i] >> 4);
+		dest[4 * i + 2] = dest[4 * i + 1] = dest[4 * i] = (data[i] >> 1) > 255 ? 255 : (data[i] >> 1);
+}
+
+void drawGrayScale(SDL_Surface* sur, uint8_t * data) {
+	uint8_t* dest = (uint8_t*)sur->pixels;
+	for (int i = 0; i < sur->h*sur->w; i++)
+		dest[4 * i + 2] = dest[4 * i + 1] = dest[4 * i] = data[i];
 }
 
 void drawNormals(SDL_Surface* sur, float* normals) {
@@ -20,6 +25,23 @@ void drawNormals(SDL_Surface* sur, float* normals) {
 		dest[4 * i + 1] = 128+normals[3 * i + 1] * 127;
 		dest[4 * i + 2] = 128+normals[3 * i + 2] * 127;
 
+	}
+}
+
+template <typename T, int size>
+void generateHalfImage(const T * in, T * out, const int outW, const int outH) {
+	const auto inH = size*outH;
+	const auto inW = size*outW;
+	for (int i = 0; i < inH; i += size) {
+		for (int j = 0; j < inW; j += size) {
+			auto tout = 0;
+			for (int m = 0; m < size; m++) {
+				for (int n = 0; n < size; n++) {
+					tout += in[(i + m)*inW + (j + n)];
+				}
+			}
+			out[(i / size)*outW + (j / size)] = tout / (size*size);
+		}
 	}
 }
 
@@ -56,10 +78,15 @@ inline void normalize(float* a)
 	a[1] /= norm;
 	a[2] /= norm;
 }
+#define RAD_SIZE (25)
+#define RAD_FULL (2*RAD_SIZE+1)
 
 template <int size>
-void generateNormals(const float* points, const int width, const int height, float* normals)
+uint16_t* generateNormals(const float* points, const int width, const int height, float* normals)
 {
+	//std::vector<double> planes[RAD_FULL][RAD_FULL];
+	uint16_t* image = new uint16_t[RAD_FULL * RAD_FULL];
+	memset(image, 0, 2 * RAD_FULL * RAD_FULL);
 	for (int i = size; i < height - size; i++) {
 		for (int j = size; j < width - size; j++) {
 			if (!points[3 * (i*width + j) + 2])		continue;
@@ -128,12 +155,27 @@ void generateNormals(const float* points, const int width, const int height, flo
 				count++;
 			}
 			if (count) {
-				normals[3 * (i*width + j)] = outNorm[0] / count;
-				normals[3 * (i*width + j) + 1] = outNorm[1] / count;
-				normals[3 * (i*width + j) + 2] = outNorm[2] / count;
+				float v3[3] = { outNorm[0] / count, outNorm[1] / count, outNorm[2] / count };
+				normalize(v3);
+
+				normals[3 * (i*width + j)] = v3[0];
+				normals[3 * (i*width + j) + 1] = v3[1];
+				normals[3 * (i*width + j) + 2] = v3[2];
+
+				double d = -v3[0] * pc[0] - v3[1] * pc[1] - v3[2] * pc[2];
+				int idx1 = RAD_SIZE + (int)(v3[0] * RAD_SIZE);
+				int idx2 = RAD_SIZE + (int)(v3[1] * RAD_SIZE);
+				assert(idx1 >= 0);
+				assert(idx2 >= 0);
+				assert(idx1 <RAD_FULL);
+				assert(idx2 <RAD_FULL);
+
+				//planes[idx2][idx1].push_back(d);
+				image[RAD_FULL*idx2 + idx1] += 1;
 			}
 		}
 	}
+	return image;
 }
 
 template <int size>
@@ -223,9 +265,12 @@ void generateNormals(const DepthPixel* depth, const int width, const int height,
 				count++;
 			}
 			if (count) {
-				normals[3 * (i*width + j)] = outNorm[0] / count;
-				normals[3 * (i*width + j) + 1] = outNorm[1] / count;
-				normals[3 * (i*width + j) + 2] = outNorm[2] / count;
+				float v3[3] = { outNorm[0] / count, outNorm[1] / count, outNorm[2] / count };
+				normalize(v3);
+
+				normals[3 * (i*width + j)] = v3[0];
+				normals[3 * (i*width + j) + 1] = v3[1];
+				normals[3 * (i*width + j) + 2] = v3[2];
 			}
 		}
 	}
@@ -277,18 +322,29 @@ int main(int argc, char *args[]){
 	SDL_Window *win2 = NULL;
 	SDL_Renderer *renderer2 = NULL;
 
+	SDL_Window *win3 = NULL;
+	SDL_Renderer *renderer3 = NULL;
+
 	SDL_Texture *bitmapTex = NULL;
 	SDL_Surface *bitmapSurface = NULL;
 	int posX = 100, posY = 100, width = 320, height = 240;
+	DepthPixel* hDepth = new DepthPixel[width*height];
 
-	win = SDL_CreateWindow("Hello World", posX, posY, width, height, 0);
-	win2 = SDL_CreateWindow("Hello World2", posX + width, posY, width, height, 0);
+	width /= 4;
+	height /= 4;
+
+	win = SDL_CreateWindow("Hello World", posX, posY, 640, 480, 0);
+	win2 = SDL_CreateWindow("Hello World2", posX + width, posY, 640, 480, 0);
+	win3 = SDL_CreateWindow("Hello World3", posX + width * 2, posY, 500, 500, 0);
 
 	renderer = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
 	renderer2 = SDL_CreateRenderer(win2, -1, SDL_RENDERER_ACCELERATED);
+	renderer3 = SDL_CreateRenderer(win3, -1, SDL_RENDERER_ACCELERATED);
 
 	SDL_Surface *depthFrameSur = SDL_CreateRGBSurface(0, width, height, 32, 0, 0, 0, 0);
 	SDL_Surface *normsFrameSur = SDL_CreateRGBSurface(0, width, height, 32, 0, 0, 0, 0);
+	SDL_Surface *visBinsSur = SDL_CreateRGBSurface(0, RAD_FULL, RAD_FULL, 32, 0, 0, 0, 0);
+
 
 	std::vector<float> points (3 * width*height,0);
 	std::vector<float> normals(3 * width*height,0);
@@ -327,17 +383,16 @@ int main(int argc, char *args[]){
 		}
 
 		DepthPixel* pDepth = (DepthPixel*)frame.getData();
-		drawGrayScale(depthFrameSur, pDepth);
-		//generatePoints(pDepth, width, height, fx, fy, points.data());
+		generateHalfImage<DepthPixel, 4>(pDepth, hDepth, width, height);
+		drawGrayScale(depthFrameSur, hDepth);
+		generatePoints(hDepth, width, height, fx, fy, points.data());
 
-		//generateNormals<2>(points.data(), width, height, normals.data());
-		generateNormals<2>(pDepth, width, height, fx, fy, normals.data());
-
+		uint16_t* ret = generateNormals<1>(points.data(), width, height, normals.data());
+		drawGrayScale(visBinsSur, ret);
+		//generateNormals<2>(pDepth, width, height, fx, fy, normals.data());
+		free(ret);
 		drawNormals(normsFrameSur, normals.data());
-		//memcpy(depthFrameSur->pixels, (void*)pDepth, 320 * 240 * sizeof(DepthPixel));
-		int middleIndex = (frame.getHeight() + 1)*frame.getWidth() / 2;
 
-		printf("[%08llu] %8d\n", (long long)frame.getTimestamp(), pDepth[middleIndex]);
 		SDL_Event e;
 		if (SDL_PollEvent(&e)) {
 			if (e.type == SDL_QUIT) {
@@ -356,6 +411,13 @@ int main(int argc, char *args[]){
 		SDL_RenderCopy(renderer2, normFrameTex, NULL, NULL);
 		SDL_RenderPresent(renderer2);
 
+		SDL_Texture *visBinsTex = SDL_CreateTextureFromSurface(renderer3, visBinsSur);
+
+		SDL_RenderClear(renderer3);
+		SDL_RenderCopy(renderer3, visBinsTex, NULL, NULL);
+		SDL_RenderPresent(renderer3);
+
+		SDL_DestroyTexture(visBinsTex);
 		SDL_DestroyTexture(depthFrameTex);
 		SDL_DestroyTexture(normFrameTex);
 	}
