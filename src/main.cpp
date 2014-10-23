@@ -3,6 +3,8 @@
 #include <SDL.h>
 #include <math.h>
 #include <vector>
+#include <algorithm>
+#include <chrono>
 using namespace openni;
 
 void drawGrayScale(SDL_Surface* sur, DepthPixel * data) {
@@ -21,9 +23,9 @@ void drawNormals(SDL_Surface* sur, float* normals) {
 	uint8_t* dest = (uint8_t*)sur->pixels;
 	for (int i = 0; i < sur->h*sur->w; i++)
 	{
-		dest[4 * i] = 128+normals[3 * i] * 127;
-		dest[4 * i + 1] = 128+normals[3 * i + 1] * 127;
-		dest[4 * i + 2] = 128+normals[3 * i + 2] * 127;
+		dest[4 * i] = 128 + normals[3 * i] * 127;
+		dest[4 * i + 1] = 128 + normals[3 * i + 1] * 127;
+		dest[4 * i + 2] = 128 + normals[3 * i + 2] * 127;
 
 	}
 }
@@ -54,9 +56,9 @@ void generatePoints(const DepthPixel* depth, const int width, const int height, 
 	for (int i = 0; i < height; i++) {
 		for (int j = 0; j < width; j++) {
 			const auto z = depth[(i*width + j)];
-			points[3 * (i*width+j)]		= (j - halfX)*z*cX;
-			points[3 * (i*width+j) + 1] = (i-halfY)*z*cY;
-			points[3 * (i*width+j) + 2] = z;
+			points[3 * (i*width + j)] = (j - halfX)*z*cX;
+			points[3 * (i*width + j) + 1] = (i - halfY)*z*cY;
+			points[3 * (i*width + j) + 2] = z;
 		}
 	}
 }
@@ -78,14 +80,26 @@ inline void normalize(float* a)
 	a[1] /= norm;
 	a[2] /= norm;
 }
-#define RAD_SIZE (25)
+#define RAD_SIZE (15)
 #define RAD_FULL (2*RAD_SIZE+1)
 
+#define MAX_CAND (5)
+#define MIN_PTS  (50)
+
+struct planeCandidate {
+	double d;
+	float n[3];
+};
+
 template <int size>
-uint16_t* generateNormals(const float* points, const int width, const int height, float* normals)
+std::vector<planeCandidate> generateNormals(const float* points, const int width, const int height, float* normals, uint16_t* image)
 {
-	//std::vector<double> planes[RAD_FULL][RAD_FULL];
-	uint16_t* image = new uint16_t[RAD_FULL * RAD_FULL];
+	std::vector<planeCandidate> returnData;
+	static std::vector<planeCandidate> planes[RAD_FULL*RAD_FULL];
+	for (auto &p : planes) {
+		p.clear();
+	}
+
 	memset(image, 0, 2 * RAD_FULL * RAD_FULL);
 	for (int i = size; i < height - size; i++) {
 		for (int j = size; j < width - size; j++) {
@@ -170,16 +184,83 @@ uint16_t* generateNormals(const float* points, const int width, const int height
 				assert(idx1 <RAD_FULL);
 				assert(idx2 <RAD_FULL);
 
-				//planes[idx2][idx1].push_back(d);
-				image[RAD_FULL*idx2 + idx1] += 1;
+				planes[RAD_FULL*idx2 + idx1].push_back({ d, { v3[0], v3[1], v3[2] } });
 			}
 		}
 	}
-	return image;
+	std::vector<int> idx(RAD_FULL*RAD_FULL);
+	for (int i = 0; i < RAD_FULL*RAD_FULL; i++)
+		idx[i] = i;
+	auto xySize = [&](int x, int y) { return planes[y*RAD_FULL + x].size();  };
+	for (int i = 1; i < RAD_FULL - 1; i++) {
+		for (int j = 1; j < RAD_FULL - 1; j++) {
+			auto c = xySize(j, i);
+			//if (c < MIN_PTS) idx[i*RAD_FULL + j]=0;
+
+			if (c < xySize(j - 1, i - 1)) idx[i*RAD_FULL + j] = 0;
+			if (c < xySize(j + 0, i - 1)) idx[i*RAD_FULL + j] = 0;
+			if (c < xySize(j + 1, i - 1)) idx[i*RAD_FULL + j] = 0;
+			if (c < xySize(j - 1, i + 0)) idx[i*RAD_FULL + j] = 0;
+			if (c < xySize(j + 1, i + 0)) idx[i*RAD_FULL + j] = 0;
+			if (c < xySize(j - 1, i + 1)) idx[i*RAD_FULL + j] = 0;
+			if (c < xySize(j + 0, i + 1)) idx[i*RAD_FULL + j] = 0;
+			if (c < xySize(j + 1, i + 1)) idx[i*RAD_FULL + j] = 0;
+		}
+	}
+
+	std::partial_sort(std::begin(idx), std::begin(idx) + MAX_CAND, std::end(idx), [&](const int i1, const int i2) {
+		return planes[i1].size() > planes[i2].size();
+	});
+	int realCand = 0;
+	for (; realCand < MAX_CAND; realCand++) {
+		if (planes[idx[realCand]].size() < MIN_PTS)
+			break;
+	}
+
+	for (auto i = idx.begin(); i < (idx.begin() + realCand); i++) {
+		std::vector<planeCandidate> candList;
+		int currY = (*i / RAD_FULL);
+		int currX = (*i % RAD_FULL);
+
+		candList.insert(candList.end(), planes[currY*RAD_FULL + currX].begin(), planes[currY*RAD_FULL + currX].end());
+		if(currY - 1 >= 0)		 candList.insert(candList.end(), planes[(currY-1)*RAD_FULL + currX].begin(), planes[(currY-1)*RAD_FULL + currX].end());
+		if(currY + 1 < RAD_FULL) candList.insert(candList.end(), planes[(currY+1)*RAD_FULL + currX].begin(), planes[(currY+1)*RAD_FULL + currX].end());
+		if(currX - 1 >= 0)		 candList.insert(candList.end(), planes[(currY)*RAD_FULL + currX-1].begin(), planes[(currY)*RAD_FULL + currX-1].end());
+		if(currX + 1 < RAD_FULL) candList.insert(candList.end(), planes[(currY)*RAD_FULL + currX+1].begin(), planes[(currY)*RAD_FULL + currX+1].end());
+
+
+		//Idea1: lets GMM this?
+
+		//Idea2: sort lists by 'd'
+		//Idea2: linear search, runnnig average, when startIdx < Mean -2sigma, stop. Repeat
+		//Idea2: Use threshold instead of computing sigma
+
+		//Idea3: be lazy
+		planeCandidate avgCand = { 0, { 0, 0, 0 } };
+		for (const auto c : candList) {
+			avgCand.d += c.d;
+			avgCand.n[0] += c.n[0];
+			avgCand.n[1] += c.n[1];
+			avgCand.n[2] += c.n[2];
+		}
+		avgCand.d /= candList.size();
+		avgCand.n[0] /= candList.size();
+		avgCand.n[1] /= candList.size();
+		avgCand.n[2] /= candList.size();
+		normalize(avgCand.n);
+		returnData.push_back(std::move(avgCand));
+		image[*i] = planes[*i].size();
+	}
+
+	//for (int i = 0; i < RAD_FULL*RAD_FULL; i++) {
+	//	image[i] = planes[i].size();
+	//}
+
+	return returnData;
 }
 
 template <int size>
-void generateNormals(const DepthPixel* depth, const int width, const int height, const float fx, const float fy,float* normals)
+void generateNormals(const DepthPixel* depth, const int width, const int height, const float fx, const float fy, float* normals)
 {
 	const auto cX = 1.0f / fx;
 	const auto cY = 1.0f / fy;
@@ -196,7 +277,7 @@ void generateNormals(const DepthPixel* depth, const int width, const int height,
 			float outNorm[3] = { 0, 0, 0 };
 			int count = 0;
 
-			if (depth[i*width + j+size] && depth[(i + size)*width + j])
+			if (depth[i*width + j + size] && depth[(i + size)*width + j])
 			{
 				const auto xDepth = depth[i*width + j + size];
 				const auto yDepth = depth[(i + size)*width + j];
@@ -346,14 +427,14 @@ int main(int argc, char *args[]){
 	SDL_Surface *visBinsSur = SDL_CreateRGBSurface(0, RAD_FULL, RAD_FULL, 32, 0, 0, 0, 0);
 
 
-	std::vector<float> points (3 * width*height,0);
-	std::vector<float> normals(3 * width*height,0);
-	
+	std::vector<float> points(3 * width*height, 0);
+	std::vector<float> normals(3 * width*height, 0);
+
 	auto hfov = depth.getHorizontalFieldOfView();
 	auto vfov = depth.getVerticalFieldOfView();
 
-	auto fx = (width/2)/tan(hfov / 2);
-	auto fy = (height / 2)/tan(vfov / 2);
+	auto fx = (width / 2) / tan(hfov / 2);
+	auto fy = (height / 2) / tan(vfov / 2);
 
 	while (true)
 	{
@@ -362,7 +443,7 @@ int main(int argc, char *args[]){
 
 		int changedStreamDummy;
 		VideoStream* pStream = &depth;
-		rc = OpenNI::waitForAnyStream (&pStream, 1, &changedStreamDummy, 2000);
+		rc = OpenNI::waitForAnyStream(&pStream, 1, &changedStreamDummy, 2000);
 		if (rc != STATUS_OK)
 		{
 			printf("Wait failed! (timeout is %d ms)\n%s\n", 2000, OpenNI::getExtendedError());
@@ -382,16 +463,35 @@ int main(int argc, char *args[]){
 			continue;
 		}
 
-		DepthPixel* pDepth = (DepthPixel*)frame.getData();
-		generateHalfImage<DepthPixel, 4>(pDepth, hDepth, width, height);
-		drawGrayScale(depthFrameSur, hDepth);
-		generatePoints(hDepth, width, height, fx, fy, points.data());
+		LARGE_INTEGER StartingTime, EndingTime, MiddleTime,ElapsedMicroseconds;
+		LARGE_INTEGER Frequency;
+		QueryPerformanceFrequency(&Frequency);
 
-		uint16_t* ret = generateNormals<1>(points.data(), width, height, normals.data());
-		drawGrayScale(visBinsSur, ret);
+		DepthPixel* pDepth = (DepthPixel*)frame.getData();
+		QueryPerformanceCounter(&StartingTime);
+		generateHalfImage<DepthPixel, 4>(pDepth, hDepth, width, height);
+		generatePoints(hDepth, width, height, fx/4, fy/4, points.data());
+		QueryPerformanceCounter(&MiddleTime);
+
+		static uint16_t ret[RAD_FULL * RAD_FULL];
+		auto candidates = generateNormals<1>(points.data(), width, height, normals.data(),ret);
 		//generateNormals<2>(pDepth, width, height, fx, fy, normals.data());
-		free(ret);
+		QueryPerformanceCounter(&EndingTime);
+
+		drawGrayScale(depthFrameSur, hDepth);
+		drawGrayScale(visBinsSur, ret);
 		drawNormals(normsFrameSur, normals.data());
+
+		ElapsedMicroseconds.QuadPart = MiddleTime.QuadPart - StartingTime.QuadPart;
+		ElapsedMicroseconds.QuadPart *= 1000000;
+		ElapsedMicroseconds.QuadPart /= Frequency.QuadPart;
+
+		printf("%lf ", static_cast<double>(ElapsedMicroseconds.QuadPart));
+
+		ElapsedMicroseconds.QuadPart = EndingTime.QuadPart - MiddleTime.QuadPart;
+		ElapsedMicroseconds.QuadPart *= 1000000;
+		ElapsedMicroseconds.QuadPart /= Frequency.QuadPart;
+		printf("%lf\n", static_cast<double>(ElapsedMicroseconds.QuadPart));
 
 		SDL_Event e;
 		if (SDL_PollEvent(&e)) {
