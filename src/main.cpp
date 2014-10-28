@@ -5,6 +5,8 @@
 #include <vector>
 #include <algorithm>
 #include <chrono>
+#include <Eigen\SVD>
+
 using namespace openni;
 
 void drawGrayScale(SDL_Surface* sur, DepthPixel * data) {
@@ -356,6 +358,48 @@ void generateNormals(const DepthPixel* depth, const int width, const int height,
 		}
 	}
 }
+#include <iostream>
+void computeTransform(const std::vector<planeCandidate> & src, const std::vector<planeCandidate> & dst)
+{
+	using namespace Eigen;
+	using namespace std;
+	if (src.size()*dst.size() == 0) return;
+	MatrixXf m(src.size(), dst.size());
+	auto sqr = [](const float a) { return a*a; };
+	const auto planeDiff = [sqr](const planeCandidate & a, const planeCandidate & b) {
+		return exp(-sqr(a.n[0] - b.n[0])/0.25 - sqr(a.n[1] - b.n[1])/0.25 - sqr(a.d - b.d)/sqr(50));
+	};
+	const auto planeDiffOrig = [sqr](const planeCandidate & a, const planeCandidate & b) {
+		return abs(a.n[0] - b.n[0]) + abs(a.n[1] - b.n[1]) + abs(a.d - b.d) / 50;
+	};
+	for (int i = 0; i < src.size(); i++) {
+		for (int j = 0; j < dst.size(); j++) {
+			m(i, j) = planeDiff(src[i], dst[j]);
+		}
+	}
+	cout << "Here is the matrix m:" << endl << m << endl;
+	JacobiSVD<MatrixXf> svd(m, ComputeThinU | ComputeThinV);
+	MatrixXf u = svd.matrixU();
+	MatrixXf s = svd.singularValues().asDiagonal();
+	MatrixXf v = svd.matrixV();
+	//cout << "Its singular values are:" << endl << s << endl;
+	//cout << "Its left singular vectors are the columns of the thin U matrix:" << endl << u << endl;
+	//cout << "Its right singular vectors are the columns of the thin V matrix:" << endl << v << endl;
+
+	MatrixXf res = u*s*v.adjoint();
+	//cout << "It's M matrix is" << endl << res << endl;
+
+	res = u* MatrixXf::Identity(s.rows(),s.cols()) *v.adjoint();
+	cout << "It's P matrix is" << endl << res << endl;
+
+	VectorXf colMax = res.colwise().maxCoeff();
+	VectorXf rowMax = res.colwise().maxCoeff();
+	cout << colMax << endl << endl <<  rowMax << endl;
+	//Vector3f rhs(1, 0, 0);
+	//cout << "Now consider this rhs vector:" << endl << rhs << endl;
+	//cout << "A least-squares solution of m*x = rhs is:" << endl << svd.solve(rhs) << endl;
+
+}
 
 int main(int argc, char *args[]){
 	Status rc = OpenNI::initialize();
@@ -435,7 +479,7 @@ int main(int argc, char *args[]){
 
 	auto fx = (width / 2) / tan(hfov / 2);
 	auto fy = (height / 2) / tan(vfov / 2);
-
+	std::vector<planeCandidate> prevPlanes;
 	while (true)
 	{
 		memset(normals.data(), 0, sizeof(float)*width*height * 3);
@@ -463,35 +507,38 @@ int main(int argc, char *args[]){
 			continue;
 		}
 
-		LARGE_INTEGER StartingTime, EndingTime, MiddleTime,ElapsedMicroseconds;
-		LARGE_INTEGER Frequency;
-		QueryPerformanceFrequency(&Frequency);
+		//LARGE_INTEGER StartingTime, EndingTime, MiddleTime,ElapsedMicroseconds;
+		//LARGE_INTEGER Frequency;
+		//QueryPerformanceFrequency(&Frequency);
 
 		DepthPixel* pDepth = (DepthPixel*)frame.getData();
-		QueryPerformanceCounter(&StartingTime);
+		//QueryPerformanceCounter(&StartingTime);
 		generateHalfImage<DepthPixel, 4>(pDepth, hDepth, width, height);
 		generatePoints(hDepth, width, height, fx/4, fy/4, points.data());
-		QueryPerformanceCounter(&MiddleTime);
+		//QueryPerformanceCounter(&MiddleTime);
 
 		static uint16_t ret[RAD_FULL * RAD_FULL];
 		auto candidates = generateNormals<1>(points.data(), width, height, normals.data(),ret);
 		//generateNormals<2>(pDepth, width, height, fx, fy, normals.data());
-		QueryPerformanceCounter(&EndingTime);
+		//QueryPerformanceCounter(&EndingTime);
 
 		drawGrayScale(depthFrameSur, hDepth);
 		drawGrayScale(visBinsSur, ret);
 		drawNormals(normsFrameSur, normals.data());
 
-		ElapsedMicroseconds.QuadPart = MiddleTime.QuadPart - StartingTime.QuadPart;
-		ElapsedMicroseconds.QuadPart *= 1000000;
-		ElapsedMicroseconds.QuadPart /= Frequency.QuadPart;
+		computeTransform(candidates, prevPlanes);
 
-		printf("%lf ", static_cast<double>(ElapsedMicroseconds.QuadPart));
+		prevPlanes = candidates;
+		//ElapsedMicroseconds.QuadPart = MiddleTime.QuadPart - StartingTime.QuadPart;
+		//ElapsedMicroseconds.QuadPart *= 1000000;
+		//ElapsedMicroseconds.QuadPart /= Frequency.QuadPart;
 
-		ElapsedMicroseconds.QuadPart = EndingTime.QuadPart - MiddleTime.QuadPart;
-		ElapsedMicroseconds.QuadPart *= 1000000;
-		ElapsedMicroseconds.QuadPart /= Frequency.QuadPart;
-		printf("%lf\n", static_cast<double>(ElapsedMicroseconds.QuadPart));
+		//printf("%lf ", static_cast<double>(ElapsedMicroseconds.QuadPart));
+
+		//ElapsedMicroseconds.QuadPart = EndingTime.QuadPart - MiddleTime.QuadPart;
+		//ElapsedMicroseconds.QuadPart *= 1000000;
+		//ElapsedMicroseconds.QuadPart /= Frequency.QuadPart;
+		//printf("%lf\n", static_cast<double>(ElapsedMicroseconds.QuadPart));
 
 		SDL_Event e;
 		if (SDL_PollEvent(&e)) {

@@ -9,8 +9,12 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PS1080Test_SOURCE_DIR}/cmake")
 
 # Look up SDL2 and add the include directory to our include path
 set(ENV{SDL2} "C:/Users/nid/usr/SDL2")
+set(ENV{EIGEN} "C:/Users/nid/usr/eigen")
+
 find_package(SDL2 REQUIRED)
-include_directories(${SDL2_INCLUDE_DIR})
+find_package(EIGEN REQUIRED)
+
+include_directories(${SDL2_INCLUDE_DIR} ${EIGEN_INCLUDE_DIR})
 
 if(NOT OPENNI2_ROOT AND ("ON" STREQUAL "ON"))
     get_filename_component(OPENNI2_LIBRARY_HINT "OPENNI_LIBRARY-NOTFOUND" PATH)
