@@ -84,6 +84,8 @@ inline void normalize(float* a)
 	a[1] /= norm;
 	a[2] /= norm;
 }
+
+
 #define RAD_SIZE (15)
 #define RAD_FULL (2*RAD_SIZE+1)
 
@@ -440,44 +442,75 @@ std::vector<std::pair<int, int>> generateCorrespondencesMP(const std::vector<pla
 void computeTransform(const std::vector<planeCandidate> & src, const std::vector<planeCandidate> & dst, const std::vector<std::pair<int, int>> corrPair)
 {
 	using namespace Eigen;
-	Matrix3f totalRotation = Matrix3f::Identity();
-	Vector3f totalTranslation = Vector3f::Zero();
 
-	for (const auto p : corrPair) {
-		int srcIdx, dstIdx;
-		std::tie(srcIdx, dstIdx) = p;
-		Vector3f srcNorm(src[srcIdx].n);
-		Vector3f dstNorm(dst[dstIdx].n);
+	if (corrPair.size() < 3) return;
 
-		srcNorm = totalRotation*srcNorm;
+	MatrixXf R(3, 3);
 
-		Vector3f rotAxis = srcNorm.cross(dstNorm.normalized());
-		float rotAngle = acos(srcNorm.normalized().dot(dstNorm.normalized()));
-		//std::cout << rotAngle << '\t' << rotAxis << std::endl;
-		AngleAxisf a2(rotAngle, rotAxis);
-		Matrix3f m = a2.toRotationMatrix();
-		if (rotAxis == Vector3f::Zero() || isnan(rotAngle))
-			m = Matrix3f::Identity();
-		totalRotation *= m;
+	JacobiSVD<MatrixXf> svd(R, ComputeThinU | ComputeThinV);
+	Vector3f rhs(1, 0, 0);
 
-		//codst[dstIdx].d-src[srcIdx].d
+	Vector3f x = svd.solve(rhs);
 
-	}
-	//std::cout <<  std::endl;
-
-	if (corrPair.size() == 0) totalRotation = Matrix3f::Identity();
-
-	//JacobiSVD<MatrixXf> svd(meanRotation, ComputeThinU | ComputeThinV);
-	//MatrixXf u = svd.matrixU();
-	//MatrixXf s = svd.singularValues().asDiagonal();
-	//MatrixXf v = svd.matrixV();
-	//Matrix3f moM = u*v.adjoint();
-	//std::cout << totalRotation << std::endl << totalRotation.determinant() << std::endl;
-
-	Vector3f ea = totalRotation.eulerAngles(0, 1, 2);
 	//std::cout << ea << std::endl;
 }
 
+template<typename T>
+T square(const T a) { return a*a; }
+
+inline float sqrNorm(const float *a, const float *b) {
+	return square(a[0] - b[0]) + square(a[1] - b[1]) + square(a[2] - b[2]);
+}
+
+void computeLinearApproxICP(
+	const int width, const int height,
+	const float normThresh, const float distThresh,
+	const float* depthSrc, const float* normalsSrc,
+	const float* depthDst, const float* normalsDst)
+{
+	using namespace Eigen;
+	using namespace std;
+	vector<int> goodIndex;
+	for (int i = 0; i < width*height; i++) {
+		if (depthSrc[3 * i + 2] == 0) continue;
+		if (depthDst[3 * i + 2] == 0) continue;
+		if (normalsSrc[3 * i + 2] == 0) continue;
+		if (normalsDst[3 * i + 2] == 0) continue;
+		if (square((int)depthSrc[3 * i + 2] - (int)depthSrc[3 * i + 2]) > distThresh) continue;
+		if (sqrNorm(normalsSrc + 3*i,normalsDst + 3*i) > normThresh) continue;
+
+		goodIndex.push_back(i);
+	}
+	
+	if (goodIndex.size() > 100) {
+		MatrixXf A(goodIndex.size(), 6);
+		VectorXf b(goodIndex.size());
+
+		for (int i = 0; i < goodIndex.size(); i++) {
+			const auto idx = goodIndex[i];
+			A(i, 0) = normalsDst[3 * idx + 2] * depthSrc[3 * idx + 1] - normalsDst[3 * idx + 1] * depthSrc[3 * idx + 2];
+			A(i, 1) = normalsDst[3 * idx + 0] * depthSrc[3 * idx + 2] - normalsDst[3 * idx + 2] * depthSrc[3 * idx + 0];
+			A(i, 2) = normalsDst[3 * idx + 1] * depthSrc[3 * idx + 0] - normalsDst[3 * idx + 0] * depthSrc[3 * idx + 1];
+			A(i, 3) = normalsDst[3 * idx + 0];
+			A(i, 4) = normalsDst[3 * idx + 1];
+			A(i, 5) = normalsDst[3 * idx + 2];
+
+			b(i) =	  normalsDst[3 * idx + 0] * depthDst[3 * idx + 0] + normalsDst[3 * idx + 1] * depthDst[3 * idx + 1] + normalsDst[3 * idx + 2] * depthDst[3 * idx + 2]
+					- normalsDst[3 * idx + 0] * depthSrc[3 * idx + 0] - normalsDst[3 * idx + 1] * depthSrc[3 * idx + 1] - normalsDst[3 * idx + 2] * depthSrc[3 * idx + 2];
+
+		}
+		JacobiSVD<MatrixXf> svd(A, ComputeThinU | ComputeThinV);
+		VectorXf x = svd.solve(b);
+
+		Matrix3f rotation;
+		rotation << 1,			x[0]*x[1]-x[2],		x[0]*x[2]+x[1],
+					x[2],		x[0]*x[1]*x[2]+1,	x[1]*x[2]-x[0],
+					-x[1],		x[0],				1;
+		Vector3f translation(x[3],x[4],x[5]);
+		std::cout << rotation << endl << translation <<std::endl;
+	}
+
+}
 
 int main(int argc, char *args[]){
 	Status rc = OpenNI::initialize();
@@ -552,6 +585,10 @@ int main(int argc, char *args[]){
 	std::vector<float> points(3 * width*height, 0);
 	std::vector<float> normals(3 * width*height, 0);
 
+
+	std::vector<float> pointsPrev(3 * width*height, 0);
+	std::vector<float> normalsPrev(3 * width*height, 0);
+
 	auto hfov = depth.getHorizontalFieldOfView();
 	auto vfov = depth.getVerticalFieldOfView();
 
@@ -607,12 +644,14 @@ int main(int argc, char *args[]){
 		auto corrPairs = generateCorrespondencesSVD(candidates, prevPlanes);
 		auto corrPairs2 = generateCorrespondencesMP(candidates, prevPlanes);
 
-		computeTransform(candidates, prevPlanes, corrPairs);
+		computeLinearApproxICP(width, height, 0.5, 15, points.data(), normals.data(), pointsPrev.data(), normalsPrev.data());
 
 		std::cout << candidates.size()<< std::endl;
 		//std::cout << std::endl;
 
 		prevPlanes = candidates;
+		normalsPrev = normals;
+		pointsPrev = points;
 		//ElapsedMicroseconds.QuadPart = MiddleTime.QuadPart - StartingTime.QuadPart;
 		//ElapsedMicroseconds.QuadPart *= 1000000;
 		//ElapsedMicroseconds.QuadPart /= Frequency.QuadPart;
