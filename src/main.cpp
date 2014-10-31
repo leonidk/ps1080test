@@ -5,7 +5,9 @@
 #include <vector>
 #include <algorithm>
 #include <chrono>
-#include <Eigen\SVD>
+#include <Eigen/SVD>
+#include <Eigen/Geometry> 
+
 
 using namespace openni;
 
@@ -85,8 +87,8 @@ inline void normalize(float* a)
 #define RAD_SIZE (15)
 #define RAD_FULL (2*RAD_SIZE+1)
 
-#define MAX_CAND (5)
-#define MIN_PTS  (50)
+#define MAX_CAND (10)
+#define MIN_PTS  (75)
 
 struct planeCandidate {
 	double d;
@@ -219,7 +221,7 @@ std::vector<planeCandidate> generateNormals(const float* points, const int width
 			break;
 	}
 
-	for (auto i = idx.begin(); i < (idx.begin() + realCand); i++) {
+	for (auto i = idx.begin(); i < (idx.begin() + MAX_CAND); i++) {
 		std::vector<planeCandidate> candList;
 		int currY = (*i / RAD_FULL);
 		int currX = (*i % RAD_FULL);
@@ -238,6 +240,8 @@ std::vector<planeCandidate> generateNormals(const float* points, const int width
 		//Idea2: Use threshold instead of computing sigma
 
 		//Idea3: be lazy
+		if (candList.size() < MIN_PTS)
+			continue;
 		planeCandidate avgCand = { 0, { 0, 0, 0 } };
 		for (const auto c : candList) {
 			avgCand.d += c.d;
@@ -254,9 +258,6 @@ std::vector<planeCandidate> generateNormals(const float* points, const int width
 		image[*i] = planes[*i].size();
 	}
 
-	//for (int i = 0; i < RAD_FULL*RAD_FULL; i++) {
-	//	image[i] = planes[i].size();
-	//}
 
 	return returnData;
 }
@@ -359,11 +360,11 @@ void generateNormals(const DepthPixel* depth, const int width, const int height,
 	}
 }
 #include <iostream>
-void computeTransform(const std::vector<planeCandidate> & src, const std::vector<planeCandidate> & dst)
+std::vector<std::pair<int,int>> generateCorrespondencesSVD(const std::vector<planeCandidate> & src, const std::vector<planeCandidate> & dst)
 {
 	using namespace Eigen;
 	using namespace std;
-	if (src.size()*dst.size() == 0) return;
+	if (src.size()*dst.size() == 0) return std::move(std::vector < std::pair<int, int>>({}));
 	MatrixXf m(src.size(), dst.size());
 	auto sqr = [](const float a) { return a*a; };
 	const auto planeDiff = [sqr](const planeCandidate & a, const planeCandidate & b) {
@@ -377,29 +378,106 @@ void computeTransform(const std::vector<planeCandidate> & src, const std::vector
 			m(i, j) = planeDiff(src[i], dst[j]);
 		}
 	}
-	cout << "Here is the matrix m:" << endl << m << endl;
+	//cout << "Here is the matrix m:" << endl << m << endl;
 	JacobiSVD<MatrixXf> svd(m, ComputeThinU | ComputeThinV);
 	MatrixXf u = svd.matrixU();
 	MatrixXf s = svd.singularValues().asDiagonal();
 	MatrixXf v = svd.matrixV();
-	//cout << "Its singular values are:" << endl << s << endl;
-	//cout << "Its left singular vectors are the columns of the thin U matrix:" << endl << u << endl;
-	//cout << "Its right singular vectors are the columns of the thin V matrix:" << endl << v << endl;
 
 	MatrixXf res = u*s*v.adjoint();
-	//cout << "It's M matrix is" << endl << res << endl;
 
 	res = u* MatrixXf::Identity(s.rows(),s.cols()) *v.adjoint();
-	cout << "It's P matrix is" << endl << res << endl;
+	//cout << "It's P matrix is" << endl << res << endl;
 
 	VectorXf colMax = res.colwise().maxCoeff();
-	VectorXf rowMax = res.colwise().maxCoeff();
-	cout << colMax << endl << endl <<  rowMax << endl;
-	//Vector3f rhs(1, 0, 0);
-	//cout << "Now consider this rhs vector:" << endl << rhs << endl;
-	//cout << "A least-squares solution of m*x = rhs is:" << endl << svd.solve(rhs) << endl;
+	VectorXf rowMax = res.rowwise().maxCoeff();
+	//cout << colMax << endl << endl <<  rowMax << endl;
+	std::vector<std::pair<int, int>> corrPairs;
 
+	for (int i = 0; i < res.rows(); i++) {
+		for (int j = 0; j < res.cols(); j++) {
+			auto v = res(i, j);
+			if (v == colMax(j) && v == rowMax(i))
+				corrPairs.push_back(std::pair<int, int>(i, j));
+		}
+	}
+
+	return std::move(corrPairs);
 }
+
+std::vector<std::pair<int, int>> generateCorrespondencesMP(const std::vector<planeCandidate> & src, const std::vector<planeCandidate> & dst)
+{
+	if (src.size()*dst.size() == 0) return std::move(std::vector < std::pair<int, int>>({}));
+	auto sqr = [](const float a) { return a*a; };
+	const auto planeDiff = [sqr](const planeCandidate & a, const planeCandidate & b) {
+		return exp(-sqr(a.n[0] - b.n[0]) / 0.25 - sqr(a.n[1] - b.n[1]) / 0.25 - sqr(a.d - b.d) / sqr(50));
+	};
+	std::vector<std::pair<int, int>> corrPairs;
+
+	std::vector<int> occMask(dst.size(), 0);
+
+	for (int i = 0; i < src.size(); i++) {
+		int maxIdx = -1;
+		double maxVal = -1;
+		for (int j = 0; j < dst.size(); j++) {
+			if (occMask[j] == 0) {
+				const auto p = planeDiff(src[i], dst[j]);
+				if (p > maxVal) {
+					maxVal = p;
+					maxIdx = j;
+				}
+			}
+		}
+		if (maxIdx >= 0) {
+			corrPairs.push_back({ i, maxIdx });
+			occMask[maxIdx] = 1;
+		}
+	}
+
+	return std::move(corrPairs);
+}
+
+void computeTransform(const std::vector<planeCandidate> & src, const std::vector<planeCandidate> & dst, const std::vector<std::pair<int, int>> corrPair)
+{
+	using namespace Eigen;
+	Matrix3f totalRotation = Matrix3f::Identity();
+	Vector3f totalTranslation = Vector3f::Zero();
+
+	for (const auto p : corrPair) {
+		int srcIdx, dstIdx;
+		std::tie(srcIdx, dstIdx) = p;
+		Vector3f srcNorm(src[srcIdx].n);
+		Vector3f dstNorm(dst[dstIdx].n);
+
+		srcNorm = totalRotation*srcNorm;
+
+		Vector3f rotAxis = srcNorm.cross(dstNorm.normalized());
+		float rotAngle = acos(srcNorm.normalized().dot(dstNorm.normalized()));
+		//std::cout << rotAngle << '\t' << rotAxis << std::endl;
+		AngleAxisf a2(rotAngle, rotAxis);
+		Matrix3f m = a2.toRotationMatrix();
+		if (rotAxis == Vector3f::Zero() || isnan(rotAngle))
+			m = Matrix3f::Identity();
+		totalRotation *= m;
+
+		//codst[dstIdx].d-src[srcIdx].d
+
+	}
+	//std::cout <<  std::endl;
+
+	if (corrPair.size() == 0) totalRotation = Matrix3f::Identity();
+
+	//JacobiSVD<MatrixXf> svd(meanRotation, ComputeThinU | ComputeThinV);
+	//MatrixXf u = svd.matrixU();
+	//MatrixXf s = svd.singularValues().asDiagonal();
+	//MatrixXf v = svd.matrixV();
+	//Matrix3f moM = u*v.adjoint();
+	//std::cout << totalRotation << std::endl << totalRotation.determinant() << std::endl;
+
+	Vector3f ea = totalRotation.eulerAngles(0, 1, 2);
+	//std::cout << ea << std::endl;
+}
+
 
 int main(int argc, char *args[]){
 	Status rc = OpenNI::initialize();
@@ -526,7 +604,13 @@ int main(int argc, char *args[]){
 		drawGrayScale(visBinsSur, ret);
 		drawNormals(normsFrameSur, normals.data());
 
-		computeTransform(candidates, prevPlanes);
+		auto corrPairs = generateCorrespondencesSVD(candidates, prevPlanes);
+		auto corrPairs2 = generateCorrespondencesMP(candidates, prevPlanes);
+
+		computeTransform(candidates, prevPlanes, corrPairs);
+
+		std::cout << candidates.size()<< std::endl;
+		//std::cout << std::endl;
 
 		prevPlanes = candidates;
 		//ElapsedMicroseconds.QuadPart = MiddleTime.QuadPart - StartingTime.QuadPart;
