@@ -461,7 +461,6 @@ T square(const T a) { return a*a; }
 inline float sqrNorm(const float *a, const float *b) {
 	return square(a[0] - b[0]) + square(a[1] - b[1]) + square(a[2] - b[2]);
 }
-//#define SQUARE_MATRIX_COMPUTE 1
 void computeLinearApproxICP(
 	const int width, const int height,
 	const float normThresh, const float distThresh,
@@ -483,66 +482,108 @@ void computeLinearApproxICP(
 	}
 	
 	if (goodIndex.size() > 100) {
-#ifndef SQUARE_MATRIX_COMPUTE
+
+		//LARGE_INTEGER StartingTime, EndingTime, MiddleTime,ElapsedMicroseconds;
+		//LARGE_INTEGER Frequency;
+		//QueryPerformanceFrequency(&Frequency);
+		//QueryPerformanceCounter(&StartingTime);
+
+		//{
+		//	//Matrix<float, Dynamic, Dynamic, RowMajor>
+		//	MatrixXf A(goodIndex.size(), 6);
+		//	VectorXf b(goodIndex.size());
+
+		//	for (int i = 0; i < goodIndex.size(); i++) {
+		//		const auto idx = goodIndex[i];
+		//		A(i, 0) = normalsDst[3 * idx + 2] * depthSrc[3 * idx + 1] - normalsDst[3 * idx + 1] * depthSrc[3 * idx + 2];
+		//		A(i, 1) = normalsDst[3 * idx + 0] * depthSrc[3 * idx + 2] - normalsDst[3 * idx + 2] * depthSrc[3 * idx + 0];
+		//		A(i, 2) = normalsDst[3 * idx + 1] * depthSrc[3 * idx + 0] - normalsDst[3 * idx + 0] * depthSrc[3 * idx + 1];
+		//		A(i, 3) = normalsDst[3 * idx + 0];
+		//		A(i, 4) = normalsDst[3 * idx + 1];
+		//		A(i, 5) = normalsDst[3 * idx + 2];
+
+		//		b(i) =	  normalsDst[3 * idx + 0] * (depthDst[3 * idx + 0] - depthSrc[3 * idx + 0])
+		//				+ normalsDst[3 * idx + 1] * (depthDst[3 * idx + 1] - depthSrc[3 * idx + 1])
+		//				+ normalsDst[3 * idx + 2] * (depthDst[3 * idx + 2] - depthSrc[3 * idx + 2]);
+
+		//	}
+		//	JacobiSVD<MatrixXf> svd(A, ComputeThinU | ComputeThinV);
+		//	VectorXf x = svd.solve(b);
+
+		//	Matrix3f rotation;
+		//	rotation << 1, x[0] * x[1] - x[2], x[0] * x[2] + x[1],
+		//		x[2], x[0] * x[1] * x[2] + 1, x[1] * x[2] - x[0],
+		//		-x[1], x[0], 1;
+		//	Vector3f translation(x[3], x[4], x[5]);
+		//	//std::cout << rotation << std::endl << translation << std::endl;
+
+		//}
+		//QueryPerformanceCounter(&MiddleTime);
+
 		{
-			MatrixXf A(goodIndex.size(), 6);
-			VectorXf b(goodIndex.size());
+		float A[6 * 6] = { 0 };
+		float b[6] = { 0 };
+		float covar[6] = { 0 };
+
+		float cPt[3] = { 0 };
 
 			for (int i = 0; i < goodIndex.size(); i++) {
 				const auto idx = goodIndex[i];
-				A(i, 0) = normalsDst[3 * idx + 2] * depthSrc[3 * idx + 1] - normalsDst[3 * idx + 1] * depthSrc[3 * idx + 2];
-				A(i, 1) = normalsDst[3 * idx + 0] * depthSrc[3 * idx + 2] - normalsDst[3 * idx + 2] * depthSrc[3 * idx + 0];
-				A(i, 2) = normalsDst[3 * idx + 1] * depthSrc[3 * idx + 0] - normalsDst[3 * idx + 0] * depthSrc[3 * idx + 1];
-				A(i, 3) = normalsDst[3 * idx + 0];
-				A(i, 4) = normalsDst[3 * idx + 1];
-				A(i, 5) = normalsDst[3 * idx + 2];
 
-				b(i) = normalsDst[3 * idx + 0] * depthDst[3 * idx + 0] + normalsDst[3 * idx + 1] * depthDst[3 * idx + 1] + normalsDst[3 * idx + 2] * depthDst[3 * idx + 2]
-					- normalsDst[3 * idx + 0] * depthSrc[3 * idx + 0] - normalsDst[3 * idx + 1] * depthSrc[3 * idx + 1] - normalsDst[3 * idx + 2] * depthSrc[3 * idx + 2];
+				cPt[0] = normalsDst[3 * idx + 2] * depthSrc[3 * idx + 1] - normalsDst[3 * idx + 1] * depthSrc[3 * idx + 2];
+				cPt[1] = normalsDst[3 * idx + 0] * depthSrc[3 * idx + 2] - normalsDst[3 * idx + 2] * depthSrc[3 * idx + 0];
+				cPt[2] = normalsDst[3 * idx + 1] * depthSrc[3 * idx + 0] - normalsDst[3 * idx + 0] * depthSrc[3 * idx + 1];
 
+				float diff = normalsDst[3 * idx + 0] * (depthDst[3 * idx + 0] - depthSrc[3 * idx + 0])
+					+ normalsDst[3 * idx + 1] * (depthDst[3 * idx + 1] - depthSrc[3 * idx + 1])
+					+ normalsDst[3 * idx + 2] * (depthDst[3 * idx + 2] - depthSrc[3 * idx + 2]);
+
+				covar[0] = cPt[0];
+				covar[1] = cPt[1];
+				covar[2] = cPt[2];
+				covar[3] = normalsDst[3 * idx];
+				covar[4] = normalsDst[3 * idx + 1];
+				covar[5] = normalsDst[3 * idx + 2];
+
+
+				for (int i = 0; i < 6; i++) {
+					for (int j = 0; j < 6; j++) {
+						A[i * 6 + j] += covar[i] * covar[j];
+					}
+				}
+
+				b[0] += cPt[0] * diff;
+				b[1] += cPt[1] * diff;
+				b[2] += cPt[2] * diff;
+				b[3] += normalsDst[3 * idx] * diff;
+				b[4] += normalsDst[3 * idx + 1] * diff;
+				b[5] += normalsDst[3 * idx + 2] * diff;
 			}
-			JacobiSVD<MatrixXf> svd(A, ComputeThinU | ComputeThinV);
-			VectorXf x = svd.solve(b);
+			MatrixXf AMat = Map<MatrixXf, 0, InnerStride<0> >(A, 6, 6, InnerStride<0>());
+			VectorXf bMat = Map<VectorXf, 0, InnerStride<0> >(b, 6);
+			//std::cout << AMat << std::endl << bMat << std::endl;
+			LDLT<MatrixXf> ch(AMat);
+
+			VectorXf x = ch.solve(-bMat);
 
 			Matrix3f rotation;
 			rotation << 1, x[0] * x[1] - x[2], x[0] * x[2] + x[1],
 				x[2], x[0] * x[1] * x[2] + 1, x[1] * x[2] - x[0],
 				-x[1], x[0], 1;
 			Vector3f translation(x[3], x[4], x[5]);
+			//std::cout << rotation << std::endl << translation << std::endl;
 		}
-#else
-		{
-			MatrixXf A = MatrixXf::Zero(6, 6);
-			VectorXf b = VectorXf::Zero(6);
+		//QueryPerformanceCounter(&EndingTime);
+		//ElapsedMicroseconds.QuadPart = MiddleTime.QuadPart - StartingTime.QuadPart;
+		//ElapsedMicroseconds.QuadPart *= 1000000;
+		//ElapsedMicroseconds.QuadPart /= Frequency.QuadPart;
 
-			for (int i = 0; i < goodIndex.size(); i++) {
-				const auto idx = goodIndex[i];
-				Vector3f srcPt(depthSrc + 3 * idx);
-				Vector3f dstPt(depthDst + 3 * idx);
+		//printf("%lf ", static_cast<double>(ElapsedMicroseconds.QuadPart));
 
-				Vector3f normDst(normalsDst + 3 * idx);
-				Vector3f cPt = srcPt.cross(normDst);
-				VectorXf covarVec(6);
-				covarVec << cPt[0], cPt[1], cPt[2], normDst[0], normDst[1], normDst[2];
-				MatrixXf m = covarVec * covarVec.transpose();
-				float diff = (srcPt - dstPt).dot(normDst);
-				VectorXf v = covarVec*diff;
-
-				A += m;
-				b += v;
-
-			}
-			LDLT<MatrixXf> ch(A);
-
-			VectorXf x = ch.solve(-b);
-
-			Matrix3f rotation;
-			rotation << 1, x[0] * x[1] - x[2], x[0] * x[2] + x[1],
-				x[2], x[0] * x[1] * x[2] + 1, x[1] * x[2] - x[0],
-				-x[1], x[0], 1;
-			Vector3f translation(x[3], x[4], x[5]);
-		}
-#endif
+		//ElapsedMicroseconds.QuadPart = EndingTime.QuadPart - MiddleTime.QuadPart;
+		//ElapsedMicroseconds.QuadPart *= 1000000;
+		//ElapsedMicroseconds.QuadPart /= Frequency.QuadPart;
+		//printf("%lf\n", static_cast<double>(ElapsedMicroseconds.QuadPart));
 	}
 
 }
