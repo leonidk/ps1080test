@@ -461,6 +461,39 @@ T square(const T a) { return a*a; }
 inline float sqrNorm(const float *a, const float *b) {
 	return square(a[0] - b[0]) + square(a[1] - b[1]) + square(a[2] - b[2]);
 }
+
+void transformImage(
+	const int width, const int height,
+	const float fx, const float fy,
+	const float* depthSrc, const float* normalsSrc,
+	float* depthDst, float* normalsDst, 
+	float rotation[9], float translation[3])
+{
+	using namespace Eigen;
+	Matrix3f rM(rotation);
+	Vector3f tV(translation);
+	for (int i = 0; i < width*height; i++) {
+		const auto p = Vector3f(depthSrc + 3 * i);
+		const auto n = Vector3f(normalsSrc + 3 * i);
+
+		const auto p_new = rM*p + tV;
+		const auto n_new = rM*n;
+
+		const auto x = static_cast<int>(p_new[0] * fx / p_new[2] + width / 2 + 0.5f);
+		const auto y = static_cast<int>(p_new[1] * fy / p_new[2] + height / 2 + 0.5f);
+		if (x < 0 || x >= width) continue;
+		if (y < 0 || y >= height) continue;
+		const auto existingZ = depthDst[3 * (y*width + x) + 2];
+		if (existingZ != 0 && existingZ < p_new[2]) continue;
+		depthDst[3 * (y*width + x)] = p_new[0];
+		depthDst[3 * (y*width + x) + 1] = p_new[1];
+		depthDst[3 * (y*width + x) + 2] = p_new[2];
+		normalsDst[3 * (y*width + x)] = n_new[0];
+		normalsDst[3 * (y*width + x) + 1] = n_new[1];
+		normalsDst[3 * (y*width + x) + 2] = n_new[2];
+	}
+}
+
 void computeLinearApproxICP(
 	const int width, const int height,
 	const float normThresh, const float distThresh,
@@ -534,9 +567,9 @@ void computeLinearApproxICP(
 				cPt[1] = normalsDst[3 * idx + 0] * depthSrc[3 * idx + 2] - normalsDst[3 * idx + 2] * depthSrc[3 * idx + 0];
 				cPt[2] = normalsDst[3 * idx + 1] * depthSrc[3 * idx + 0] - normalsDst[3 * idx + 0] * depthSrc[3 * idx + 1];
 
-				float diff = normalsDst[3 * idx + 0] * (depthDst[3 * idx + 0] - depthSrc[3 * idx + 0])
-					+ normalsDst[3 * idx + 1] * (depthDst[3 * idx + 1] - depthSrc[3 * idx + 1])
-					+ normalsDst[3 * idx + 2] * (depthDst[3 * idx + 2] - depthSrc[3 * idx + 2]);
+				float diff = normalsDst[3 * idx + 0] * (depthSrc[3 * idx + 0] - depthDst[3 * idx + 0])
+					+ normalsDst[3 * idx + 1] * (depthSrc[3 * idx + 1] - depthDst[3 * idx + 1])
+					+ normalsDst[3 * idx + 2] * (depthSrc[3 * idx + 2] - depthDst[3 * idx + 2]);
 
 				covar[0] = cPt[0];
 				covar[1] = cPt[1];
@@ -571,7 +604,9 @@ void computeLinearApproxICP(
 				x[2], x[0] * x[1] * x[2] + 1, x[1] * x[2] - x[0],
 				-x[1], x[0], 1;
 			Vector3f translation(x[3], x[4], x[5]);
-			//std::cout << rotation << std::endl << translation << std::endl;
+			//std::cout << x << std::endl;
+
+			std::cout << rotation << std::endl << translation << std::endl;
 		}
 		//QueryPerformanceCounter(&EndingTime);
 		//ElapsedMicroseconds.QuadPart = MiddleTime.QuadPart - StartingTime.QuadPart;
@@ -714,6 +749,17 @@ int main(int argc, char *args[]){
 		//QueryPerformanceCounter(&EndingTime);
 
 		drawGrayScale(depthFrameSur, hDepth);
+		//float rot[9] = { 1, 0, 0, 0, 1, 0, 0, 0, 1 };
+		//float trans[3] = { 0, 0, 150 };
+		//for (auto &&d : pointsPrev) {
+		//	d = 0;
+		//}
+		//for (auto &&d : normalsPrev) {
+		//	d = 0;
+		//}
+		//transformImage(width, height, fx/4, fy/4, points.data(), normals.data(), pointsPrev.data(), normalsPrev.data(), rot, trans);
+		//drawNormals(depthFrameSur, normalsPrev.data());
+
 		drawGrayScale(visBinsSur, ret);
 		drawNormals(normsFrameSur, normals.data());
 
