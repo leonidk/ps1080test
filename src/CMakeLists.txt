@@ -1,5 +1,11 @@
 project(PS1080Test)
-add_executable(PS1080Test main.cpp detect.cpp)
+
+file(GLOB ps1080test_SRC
+    "*.h"
+    "*.cpp"
+)
+
+add_executable(PS1080Test ${ps1080test_SRC})
 target_link_libraries(PS1080Test ${SDL2_LIBRARY} ${OPENNI2_LIBRARY})
 
 if(WIN32)
