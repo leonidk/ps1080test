@@ -3,6 +3,7 @@
 #include <OpenNI.h>
 
 class ONICamera : public Camera {
+public:
     ONICamera() {
     }
     bool Start() override {

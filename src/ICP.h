@@ -1,6 +1,7 @@
 #pragma once
 #include "linalg.h"
 #include <vector>
+#include <iostream>
 
 void transformImage(
     const int width, const int height,
@@ -36,9 +37,9 @@ void transformImage(
     }
 }
 
-void computeLinearApproxICP(
+Eigen::Matrix4f computeLinearApproxICP(
     const int width, const int height,
-    const float normThresh, const float distThresh,
+    const float normThresh, const float distThresh, const size_t ptTresh,
     const float *depthSrc, const float *normalsSrc,
     const float *depthDst, const float *normalsDst) {
     using namespace Eigen;
@@ -61,12 +62,7 @@ void computeLinearApproxICP(
         goodIndex.push_back(i);
     }
 
-    if (goodIndex.size() > 100) {
-
-        //LARGE_INTEGER StartingTime, EndingTime, MiddleTime,ElapsedMicroseconds;
-        //LARGE_INTEGER Frequency;
-        //QueryPerformanceFrequency(&Frequency);
-        //QueryPerformanceCounter(&StartingTime);
+	if (goodIndex.size() > ptTresh) {
 
         //{
         //	//Matrix<float, Dynamic, Dynamic, RowMajor>
@@ -98,7 +94,6 @@ void computeLinearApproxICP(
         //	//std::cout << rotation << std::endl << translation << std::endl;
 
         //}
-        //QueryPerformanceCounter(&MiddleTime);
 
         {
             float A[6 * 6] = { 0 };
@@ -143,25 +138,24 @@ void computeLinearApproxICP(
 
             VectorXf x = ch.solve(-bMat);
 
-            Matrix3f rotation;
-            rotation << 1, x[0] * x[1] - x[2], x[0] * x[2] + x[1],
-                x[2], x[0] * x[1] * x[2] + 1, x[1] * x[2] - x[0],
-                -x[1], x[0], 1;
-            Vector3f translation(x[3], x[4], x[5]);
-            //std::cout << x << std::endl;
+            //Matrix3f rotation;
+            //rotation << 1, x[0] * x[1] - x[2], x[0] * x[2] + x[1],
+            //    x[2], x[0] * x[1] * x[2] + 1, x[1] * x[2] - x[0],
+            //    -x[1], x[0], 1;
+            //Vector3f translation(x[3], x[4], x[5]);
+			// std::cout << rotation << std::endl << translation << std::endl;
 
-            std::cout << rotation << std::endl << translation << std::endl;
+
+			Matrix4f transform;
+			transform << 1, x[0] * x[1] - x[2], x[0] * x[2] + x[1], x[3],
+				x[2], x[0] * x[1] * x[2] + 1, x[1] * x[2] - x[0], x[4],
+				-x[1], x[0], 1, x[5],
+				0, 0, 0, 1;
+			return transform;
         }
-        //QueryPerformanceCounter(&EndingTime);
-        //ElapsedMicroseconds.QuadPart = MiddleTime.QuadPart - StartingTime.QuadPart;
-        //ElapsedMicroseconds.QuadPart *= 1000000;
-        //ElapsedMicroseconds.QuadPart /= Frequency.QuadPart;
 
-        //printf("%lf ", static_cast<double>(ElapsedMicroseconds.QuadPart));
-
-        //ElapsedMicroseconds.QuadPart = EndingTime.QuadPart - MiddleTime.QuadPart;
-        //ElapsedMicroseconds.QuadPart *= 1000000;
-        //ElapsedMicroseconds.QuadPart /= Frequency.QuadPart;
-        //printf("%lf\n", static_cast<double>(ElapsedMicroseconds.QuadPart));
     }
+	Affine3f transform(Translation3f(0, 0, 0));
+	Matrix4f matrix = transform.matrix();
+	return matrix;
 }
