@@ -1,5 +1,3 @@
-
-
 #include "ONICamera.h"
 #include "linalg.h"
 #include "detect.h"
@@ -17,8 +15,8 @@ int main(int argc, char *args[]) {
 	height /= SUBSAMPLE_FACTOR;
 
 	SDLWrapper depthWin("Depth", posX, posY, width, height, 8);
-	SDLWrapper normalWin("Normals", posX + width, posY, width, height, 8);
-	SDLWrapper visWin("Planes", posX + width * 2, posY, RAD_FULL, RAD_FULL, 15);
+	SDLWrapper normalWin("Normals", posX + width*8, posY, width, height, 8);
+	SDLWrapper visWin("Planes", posX + width * 2*8, posY, RAD_FULL, RAD_FULL, 15);
 
 	std::vector<float> points(3 * width * height, 0);
 	std::vector<float> normals(3 * width * height, 0);
@@ -34,6 +32,7 @@ int main(int argc, char *args[]) {
 	auto fx = cam.getFx() / SUBSAMPLE_FACTOR;
 	auto fy = cam.getFy() / SUBSAMPLE_FACTOR;
 	planeDetector<15> pd;
+	iteratedICP icp(width, height);
 	while (camRunning) {
 		//get camera data
 		camRunning = cam.syncNext();
@@ -46,7 +45,6 @@ int main(int argc, char *args[]) {
 		generateNormals<1>(hDepth, width, height, fx, fy, normals.data());
 
 		auto candidates =  pd.detectPlanes(15, 75, width, height, points.data(), normals.data());
-		//auto candidates = generateNormalsAndPlanes<1>(points.data(), width, height, normals.data(), planeDebugImage);
 
 		//visualize output
 		depthWin.setGrayScale<4>(hDepth);
@@ -56,17 +54,12 @@ int main(int argc, char *args[]) {
 		//figure out which plane came from where
 		//auto corrPairs = generateCorrespondencesSVD(candidates, prevPlanes);
 		//auto corrPairs2 = generateCorrespondencesMP(candidates, prevPlanes);
-
-		for (int i = 0; i < 4; i++) {
-			auto transf = computeLinearApproxICP(width, height, 0.5, 15, 100, points.data(), normals.data(), pointsPrev.data(), normalsPrev.data());
-			std::cout << transf << std::endl;
-			//transformImage(width, height, fx, fy, points.data(), normals.data(), pointsPrev.data(), normalsPrev.data(), rotation, translation);
-		}
+		//auto trans = icp.runICPIter(10, fx, fy, 0.5, 15, 100, points.data(), normals.data(), pointsPrev.data(), normalsPrev.data());
 
 		//save frame state
-		prevPlanes = candidates;
-		normalsPrev = normals;
-		pointsPrev = points;
+		//prevPlanes = candidates;
+		//normalsPrev = normals;
+		//pointsPrev = points;
 
 		SDL_Event e;
 		if (SDL_PollEvent(&e)) {

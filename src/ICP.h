@@ -8,10 +8,11 @@ void transformImage(
     const float fx, const float fy,
     const float *depthSrc, const float *normalsSrc,
     float *depthDst, float *normalsDst,
-    float rotation[9], float translation[3]) {
+    const Eigen::Matrix4f & transformation) {
     using namespace Eigen;
-    Matrix3f rM(rotation);
-    Vector3f tV(translation);
+
+	Matrix3f rM = transformation.block(0, 0, 3, 3); 
+	Vector3f tV = transformation.block(0, 3, 3, 1);
     for (int i = 0; i < width * height; i++) {
         const auto p = Vector3f(depthSrc + 3 * i);
         const auto n = Vector3f(normalsSrc + 3 * i);
@@ -39,7 +40,7 @@ void transformImage(
 
 Eigen::Matrix4f computeLinearApproxICP(
     const int width, const int height,
-    const float normThresh, const float distThresh, const size_t ptTresh,
+    const float normThresh, const float distThresh, const size_t ptThresh,
     const float *depthSrc, const float *normalsSrc,
     const float *depthDst, const float *normalsDst) {
     using namespace Eigen;
@@ -62,8 +63,9 @@ Eigen::Matrix4f computeLinearApproxICP(
         goodIndex.push_back(i);
     }
 
-	if (goodIndex.size() > ptTresh) {
+	if (goodIndex.size() > ptThresh) {
 
+		// solving the linear system with an SVD
         //{
         //	//Matrix<float, Dynamic, Dynamic, RowMajor>
         //	MatrixXf A(goodIndex.size(), 6);
@@ -95,6 +97,7 @@ Eigen::Matrix4f computeLinearApproxICP(
 
         //}
 
+		// solving the linear system with normal equations
         {
             float A[6 * 6] = { 0 };
             float b[6] = { 0 };
@@ -133,7 +136,6 @@ Eigen::Matrix4f computeLinearApproxICP(
             }
             MatrixXf AMat = Map<MatrixXf, 0, InnerStride<0> >(A, 6, 6, InnerStride<0>());
             VectorXf bMat = Map<VectorXf, 0, InnerStride<0> >(b, 6);
-            //std::cout << AMat << std::endl << bMat << std::endl;
             LDLT<MatrixXf> ch(AMat);
 
             VectorXf x = ch.solve(-bMat);
@@ -159,3 +161,39 @@ Eigen::Matrix4f computeLinearApproxICP(
 	Matrix4f matrix = transform.matrix();
 	return matrix;
 }
+
+class iteratedICP
+{
+public:
+	iteratedICP(const int width, const int height)
+		: width(width), height(height), dataPtr(std::unique_ptr<float[]>(new float[3 * 2 * width*height]))
+	{
+		points = static_cast<float*>(dataPtr.get());
+		normals = static_cast<float*>(dataPtr.get()) + 3 * width*height;		  
+	}
+	Eigen::Matrix4f runICPIter(const int iter, const float fx, const float fy,
+		const float normThresh, const float distThresh, const size_t ptThresh,
+		const float *depthSrc, const float *normalsSrc,
+		const float *depthDst, const float *normalsDst) 
+	{
+		using namespace Eigen;
+		if (iter < 1) {
+			Affine3f transform(Translation3f(0, 0, 0));
+			Matrix4f matrix = transform.matrix();
+			return matrix;
+		}
+
+		Eigen::Transform<float, 3, Affine> trans(computeLinearApproxICP(width, height, normThresh, distThresh, ptThresh, depthSrc, normalsSrc, depthDst, normalsDst));
+		for (int i = 1; i < iter; ++i) {
+			memset(dataPtr.get(), 0, 6 * width*height*sizeof(float));
+			transformImage(width, height, fx, fy, depthSrc, normalsSrc, points, normals, trans.matrix());
+			trans = Eigen::Transform<float, 3, Affine>(computeLinearApproxICP(width, height, normThresh, distThresh, ptThresh, points, normals, depthDst, normalsDst)) * trans;
+		}
+		return trans.matrix();
+	}
+private:
+	int width, height;
+	float *normals;
+	float *points;
+	std::unique_ptr<float[]> dataPtr;
+};
