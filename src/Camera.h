@@ -32,9 +32,9 @@ protected:
 	float px, py, fx, fy;
 };
 
-void generatePoints(const uint16_t *depth, const int width, const int height, const float fx, const float fy, float *points) {
-	auto halfX = width / 2;
-	auto halfY = height / 2;
+void generatePoints(const uint16_t *depth, const int width, const int height, const float fx, const float fy, const float px, const float py, float *points) {
+	auto halfX = px;
+	auto halfY = py;
 	auto cX = 1.0f / fx;
 	auto cY = 1.0f / fy;
 	for (int i = 0; i < height; i++) {
@@ -48,13 +48,13 @@ void generatePoints(const uint16_t *depth, const int width, const int height, co
 }
 
 template <int size>
-void generateNormals(const uint16_t *depth, const int width, const int height, const float fx, const float fy, float *normals) {
+void generateNormals(const uint16_t *depth, const int width, const int height, const float fx, const float fy, const float px, const float py, float *normals) {
 	const auto cX = 1.0f / fx;
 	const auto cY = 1.0f / fy;
 	const auto xStep = cX * size;
 	const auto yStep = cY * size;
-	auto halfX = width / 2;
-	auto halfY = height / 2;
+	auto halfX = px;
+	auto halfY = py;
 	const auto xyStep = xStep * yStep;
 	for (int i = size; i < height - size; i++) {
 		for (int j = size; j < width - size; j++) {
@@ -142,7 +142,7 @@ void generateNormals(const uint16_t *depth, const int width, const int height, c
 }
 
 template <int size>
-void generateNormalsFull(const uint16_t *depth, const int width, const int height, const float fx, const float fy, float *normals) {
+void generateNormalsFull(const uint16_t *depth, const int width, const int height, float *normals) {
 	for (int i = size; i < height - size; i++) {
 		for (int j = size; j < width - size; j++) {
 			if (!points[3 * (i * width + j) + 2])

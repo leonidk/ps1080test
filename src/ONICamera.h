@@ -43,6 +43,8 @@ public:
 
         fx = (width / 2.0) / tan(hfov / 2.0);
         fy = (height / 2.0) / tan(vfov / 2.0);
+		px = width / 2;
+		py = height / 2;
         return true;
     }
     bool syncNext() override {
