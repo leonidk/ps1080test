@@ -72,8 +72,8 @@ void generateNormals(const uint16_t *depth, const int width, const int height, c
 				const auto diffYZ = yDepth - cDepth;
 
 				// cX*(5*z +j*(z-z2));
-				const float v1[] = { cX * (size * xDepth + (j - halfX) * diffXZ), 0, diffXZ };
-				const float v2[] = { 0, cY * (size * yDepth + (halfY - i) * diffYZ), diffYZ };
+				const float v1[] = { cX * (size * xDepth + (j - halfX) * diffXZ), 0, (float)diffXZ };
+				const float v2[] = { 0, cY * (size * yDepth + (halfY - i) * diffYZ), (float)diffYZ };
 				float v3[] = { -v1[2] * v2[1], -v1[0] * v2[2], v1[0] * v2[1] };
 				normalize(v3);
 				outNorm[0] += v3[0];
@@ -88,8 +88,8 @@ void generateNormals(const uint16_t *depth, const int width, const int height, c
 				const auto diffYZ = yDepth - cDepth;
 
 				// cX*(5*z +j*(z-z2));
-				const float v1[] = { cX * (size * xDepth + (j - halfX) * diffXZ), 0, diffXZ };
-				const float v2[] = { 0, cY * (size * yDepth + (halfY - i) * diffYZ), diffYZ };
+				const float v1[] = { cX * (size * xDepth + (j - halfX) * diffXZ), 0, (float)diffXZ };
+				const float v2[] = { 0, cY * (size * yDepth + (halfY - i) * diffYZ), (float)diffYZ };
 				float v3[] = { -v1[2] * v2[1], -v1[0] * v2[2], v1[0] * v2[1] };
 				normalize(v3);
 				outNorm[0] += v3[0];
@@ -104,8 +104,8 @@ void generateNormals(const uint16_t *depth, const int width, const int height, c
 				const auto diffYZ = cDepth - yDepth;
 
 				// cX*(5*z +j*(z-z2));
-				const float v1[] = { cX * (size * xDepth + (j - halfX) * diffXZ), 0, diffXZ };
-				const float v2[] = { 0, cY * (size * yDepth + (halfY - i) * diffYZ), diffYZ };
+				const float v1[] = { cX * (size * xDepth + (j - halfX) * diffXZ), 0, (float)diffXZ };
+				const float v2[] = { 0, cY * (size * yDepth + (halfY - i) * diffYZ), (float)diffYZ };
 				float v3[] = { -v1[2] * v2[1], -v1[0] * v2[2], v1[0] * v2[1] };
 				normalize(v3);
 				outNorm[0] += v3[0];
@@ -120,8 +120,8 @@ void generateNormals(const uint16_t *depth, const int width, const int height, c
 				const auto diffYZ = cDepth - yDepth;
 
 				// cX*(5*z +j*(z-z2));
-				const float v1[] = { cX * (size * xDepth + (j - halfX) * diffXZ), 0, diffXZ };
-				const float v2[] = { 0, cY * (size * yDepth + (halfY - i) * diffYZ), diffYZ };
+				const float v1[] = { cX * (size * xDepth + (j - halfX) * diffXZ), 0, (float)diffXZ };
+				const float v2[] = { 0, cY * (size * yDepth + (halfY - i) * diffYZ), (float)diffYZ };
 				float v3[] = { -v1[2] * v2[1], -v1[0] * v2[2], v1[0] * v2[1] };
 				normalize(v3);
 				outNorm[0] += v3[0];

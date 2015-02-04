@@ -41,10 +41,10 @@ public:
         auto hfov = depth.getHorizontalFieldOfView();
         auto vfov = depth.getVerticalFieldOfView();
 
-        fx = (width / 2.0) / tan(hfov / 2.0);
-        fy = (height / 2.0) / tan(vfov / 2.0);
-		px = width / 2;
-		py = height / 2;
+        fx = (width / 2.0f) / tan(hfov / 2.0f);
+        fy = (height / 2.0f) / tan(vfov / 2.0f);
+		px = width / 2.0f;
+		py = height / 2.0f;
         return true;
     }
     bool syncNext() override {

@@ -105,7 +105,7 @@ Eigen::Matrix4f computeLinearApproxICP(
 
             float cPt[3] = { 0 };
 
-            for (int i = 0; i < goodIndex.size(); i++) {
+            for (size_t i = 0; i < goodIndex.size(); i++) {
                 const auto idx = goodIndex[i];
 
                 cPt[0] = normalsDst[3 * idx + 2] * depthSrc[3 * idx + 1] - normalsDst[3 * idx + 1] * depthSrc[3 * idx + 2];

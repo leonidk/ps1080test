@@ -39,9 +39,9 @@ public:
 	void setNormals(float *normals) {
 		uint8_t *dest = (uint8_t *)sur->pixels;
 		for (int i = 0; i < sur->h * sur->w; i++) {
-			dest[4 * i] = 128 + normals[3 * i] * 127;
-			dest[4 * i + 1] = 128 + normals[3 * i + 1] * 127;
-			dest[4 * i + 2] = 128 + normals[3 * i + 2] * 127;
+			dest[4 * i] = static_cast<uint8_t>(128 + normals[3 * i] * 127);
+			dest[4 * i + 1] = static_cast<uint8_t>(128 + normals[3 * i + 1] * 127);
+			dest[4 * i + 2] = static_cast<uint8_t>(128 + normals[3 * i + 2] * 127);
 		}
 	}
 	void Draw()
@@ -53,7 +53,7 @@ public:
 		SDL_DestroyTexture(tex);
 	}
 	static std::array<uint8_t, 3> getNewColor(int value, int total = 10) {
-		return HsvToRgb({ 255.0f*(static_cast<float>(value) / total), 128, 255 });
+		return HsvToRgb({ (uint8_t)(255.0f*(static_cast<float>(value) / total)), 128, 255 });
 	}
 	~SDLWrapper()
 	{

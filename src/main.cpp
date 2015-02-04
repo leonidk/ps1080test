@@ -28,7 +28,6 @@ int main(int argc, char *args[]) {
 	std::vector<float> normalsPrev(3 * width * height, 0);
 
 	std::vector<planeCandidate> prevPlanes;
-	uint16_t planeDebugImage[31 * 31];
 	std::vector<uint8_t> planeDebugImage_Color(width*height * 3,0);
 
 	ONICamera cam;
@@ -52,7 +51,7 @@ int main(int argc, char *args[]) {
 
 		auto candidates =  pd.detectPlanes(512, 2.5, width, height, points.data(), normals.data());
 		memset(planeDebugImage_Color.data(), 0, width*height * 3);
-		for (int i = 0; i < candidates.size(); i++) {
+		for (size_t i = 0; i < candidates.size(); i++) {
 			const auto color = visWin.getNewColor(i);
 			const auto plane = candidates[i];
 			const auto error = std::min<float>(150.0f, plane.stddev * 3);
