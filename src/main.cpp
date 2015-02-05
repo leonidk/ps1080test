@@ -37,6 +37,7 @@ int main(int argc, char *args[]) {
 	auto px = cam.getPx() / SUBSAMPLE_FACTOR;
 	auto py = cam.getPy() / SUBSAMPLE_FACTOR;
 	planeDetector<15> pd;
+	planeDetectorMS pdMS;
 	iteratedICP icp(width, height);
 	while (camRunning) {
 		//get camera data
@@ -50,11 +51,12 @@ int main(int argc, char *args[]) {
 		generateNormals<1>(hDepth, width, height, fx, fy, px, py, normals.data());
 
 		auto candidates =  pd.detectPlanes(512, 2.5, width, height, points.data(), normals.data());
+		//auto candidates = pdMS.detectPlanes(512, 0.15f, (float)(0.125 / 64.0), width, height, points.data(), normals.data());
 		memset(planeDebugImage_Color.data(), 0, width*height * 3);
 		for (size_t i = 0; i < candidates.size(); i++) {
 			const auto color = visWin.getNewColor(i);
 			const auto plane = candidates[i];
-			const auto error = std::min<float>(150.0f, plane.stddev * 3);
+			const auto error = std::min<float>(25.0f, plane.stddev * 3);
 			for (int j = 0; j < width*height; j++) {
 				const auto distFromPlane = plane.n[0] * points[3 * j] + plane.n[1] * points[3 * j + 1] + plane.n[2] * points[3 * j + 2] + plane.d;
 				if (fabs(distFromPlane) < error) {

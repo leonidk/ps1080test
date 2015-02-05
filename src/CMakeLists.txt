@@ -2,6 +2,7 @@ project(PS1080Test)
 
 file(GLOB ps1080test_SRC
     "*.h"
+	"*.hpp"
     "*.cpp"
 )
 
