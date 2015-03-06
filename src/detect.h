@@ -1,11 +1,12 @@
 #pragma once
-#include "linalg.h"
-#include "nanoflann.hpp"
 #include <vector>
 #include <memory>
 #include <unordered_map>
 #include <map>
 #include <unordered_set>
+#include <cmath>
+#include "linalg.h"
+#include "nanoflann.hpp"
 
 struct planeCandidate {
 	double d;
@@ -49,7 +50,7 @@ public:
 		const auto tolerance = square(radius*0.0625);
 		auto numPixels = height*width;
 		for (int i = 0; i < numPixels; i++) {
-			if (isnormal(normals[3 * i + 2])) {
+			if (std::isnormal(normals[3 * i + 2])) {
 				float d = -normals[3 * i] * points[3 * i] - normals[3 * i + 1] * points[3 * i + 1] - normals[3 * i + +2] * points[3 * i + 2];
 				planeCloud.pts.push_back({ normals[3 * i], normals[3 * i + 1], distToNormal*d });
 			}

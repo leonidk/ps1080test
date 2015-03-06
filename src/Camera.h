@@ -1,7 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include <math.h>
-
+#include "linalg.h"
 class Camera {
 public:
 	virtual bool Start() = 0;
@@ -141,8 +141,9 @@ void generateNormals(const uint16_t *depth, const int width, const int height, c
 	}
 }
 
+
 template <int size>
-void generateNormalsFull(const uint16_t *depth, const int width, const int height, float *normals) {
+void generateNormalsFull(const float *points, const int width, const int height, float *normals) {
 	for (int i = size; i < height - size; i++) {
 		for (int j = size; j < width - size; j++) {
 			if (!points[3 * (i * width + j) + 2])
@@ -220,8 +221,8 @@ void generateNormalsFull(const uint16_t *depth, const int width, const int heigh
 				normals[3 * (i * width + j) + 2] = v3[2];
 
 				double d = -v3[0] * pc[0] - v3[1] * pc[1] - v3[2] * pc[2];
-				int idx1 = RAD_SIZE + (int)(v3[0] * RAD_SIZE);
-				int idx2 = RAD_SIZE + (int)(v3[1] * RAD_SIZE);
+				//int idx1 = RAD_SIZE + (int)(v3[0] * RAD_SIZE);
+				//int idx2 = RAD_SIZE + (int)(v3[1] * RAD_SIZE);
 				assert(idx1 >= 0);
 				assert(idx2 >= 0);
 				assert(idx1 < RAD_FULL);

@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClInclude Include="..\src\Camera.h" />
+    <ClInclude Include="..\src\detect.h" />
+    <ClInclude Include="..\src\Drawing.h" />
+    <ClInclude Include="..\src\ICP.h" />
+    <ClInclude Include="..\src\linalg.h" />
+    <ClInclude Include="..\src\nanoflann.hpp" />
+    <ClInclude Include="..\src\ONICamera.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\main.cpp" />
+  </ItemGroup>
+</Project>
