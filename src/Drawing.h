@@ -8,9 +8,9 @@ public:
 	SDLWrapper(const char* name, int x, int y, size_t width, size_t height,size_t winScale = 1)
 		: x(x), y(y), w(width), h(height)
 	{
-		win = SDL_CreateWindow(name, x, y, width*winScale, height*winScale, 0);
+		win = SDL_CreateWindow(name, x, y, (int)(width*winScale), (int)(height*winScale), 0);
 		ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
-		sur = SDL_CreateRGBSurface(0, width, height, 32, 0, 0, 0, 0);
+		sur = SDL_CreateRGBSurface(0, (int)width, (int)height, 32, 0, 0, 0, 0);
 
 	}
 	template <size_t subsamplePower>

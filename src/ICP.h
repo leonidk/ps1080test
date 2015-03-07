@@ -1,7 +1,10 @@
 #pragma once
-#include "linalg.h"
 #include <vector>
+#include <memory>
 #include <iostream>
+#include "linalg.h"
+#include <Eigen/Geometry>
+#include <Eigen/Cholesky>
 
 void transformImage(
 	const int width, const int height,

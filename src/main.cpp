@@ -1,9 +1,9 @@
 #include "ONICamera.h"
 #include "linalg.h"
-#include "detect.h"
 #include "ICP.h"
 #include "Drawing.h"
-
+#include "detect.h"
+#include "detectMS.h"
 #define GLEW_STATIC
 #include <GL/glew.h>
 
@@ -70,7 +70,7 @@ int main(int argc, char *args[]) {
 		auto candidates =  pd.detectPlanes(512, 2.5, width, height, points.data(), normals.data());
 		//auto candidates = pdMS.detectPlanes(512, 0.15f, (float)(0.125 / 64.0), width, height, points.data(), normals.data());
 		memset(planeDebugImage_Color.data(), 0, width*height * 3);
-		for (size_t i = 0; i < candidates.size(); i++) {
+		for (int i = 0; i < candidates.size(); i++) {
 			const auto color = visWin.getNewColor(i);
 			const auto plane = candidates[i];
 			const auto error = std::min<float>(25.0f, plane.stddev * 3);

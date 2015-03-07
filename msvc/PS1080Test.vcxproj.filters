@@ -8,6 +8,7 @@
     <ClInclude Include="..\src\linalg.h" />
     <ClInclude Include="..\src\nanoflann.hpp" />
     <ClInclude Include="..\src\ONICamera.h" />
+    <ClInclude Include="..\src\detectMS.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\main.cpp" />

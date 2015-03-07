@@ -1,8 +1,11 @@
 #pragma once
 #include <stdio.h>
-#include <Eigen/SVD>
-#include <Eigen/Geometry>
-#include <Eigen/Cholesky>
+
+struct planeCandidate {
+	double d;
+	float n[3];
+	float stddev;
+};
 
 template <typename T, int size>
 void generateHalfImage(const T *in, T *out, const int outW, const int outH) {
