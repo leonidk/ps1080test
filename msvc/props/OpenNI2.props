@@ -1,8 +1,6 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
- 
-  <ImportGroup Label="PropertySheets"/>
- 
+  <ImportGroup Label="PropertySheets" />
   <!-- Debug|Win32 -->
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
   </PropertyGroup>
@@ -14,11 +12,11 @@
       <AdditionalLibraryDirectories>$(OPENNI2_LIB);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>OpenNI2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
-	     <PostBuildEvent>
-      <Command>xcopy /D /E "$(OPENNI2_REDIST)." "$(OutDir)"</Command>
+    <PostBuildEvent>
+      <Command>xcopy /D /S /Y "$(OPENNI2_REDIST)." "$(OutDir)"
+	  %(Command)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
- 
   <!-- Release|Win32 -->
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
   </PropertyGroup>
@@ -30,11 +28,11 @@
       <AdditionalLibraryDirectories>$(OPENNI2_LIB);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>OpenNI2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
-		     <PostBuildEvent>
-      <Command>xcopy /D /E "$(OPENNI2_REDIST)." "$(OutDir)"</Command>
+    <PostBuildEvent>
+      <Command>xcopy /D /S /Y "$(OPENNI2_REDIST)." "$(OutDir)"
+	  %(Command)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
- 
   <!-- Debug|x64 -->
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
   </PropertyGroup>
@@ -46,11 +44,11 @@
       <AdditionalLibraryDirectories>$(OPENNI2_LIB64);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>OpenNI2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
-		     <PostBuildEvent>
-      <Command>xcopy /D /E "$(OPENNI2_REDIST)." "$(OutDir)"</Command>
+    <PostBuildEvent>
+      <Command>xcopy /D /S /Y "$(OPENNI2_REDIST64)." "$(OutDir)"
+	  %(Command)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
- 
   <!-- Release|x64 -->
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
   </PropertyGroup>
@@ -62,9 +60,9 @@
       <AdditionalLibraryDirectories>$(OPENNI2_LIB64);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>OpenNI2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
-		     <PostBuildEvent>
-      <Command>xcopy /D /E "$(OPENNI2_REDIST)." "$(OutDir)"</Command>
+    <PostBuildEvent>
+      <Command>xcopy /D /S /Y "$(OPENNI2_REDIST64)." "$(OutDir)"
+	  %(Command)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
-
 </Project>

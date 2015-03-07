@@ -10,7 +10,8 @@
       <AdditionalDependencies>SDL2main.lib;SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /D /E "$(SDL_PATH)\bin\SDL2.dll" "$(OutDir)"</Command>
+      <Command>xcopy /D /E /Y "$(SDL_PATH)\lib\$(PlatformTarget)\SDL2.dll" "$(OutDir)"
+	  %(Command)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
