@@ -1,9 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ImportGroup Label="PropertySheets" />
-  <PropertyGroup Label="UserMacros">
-    <SDL_PATH>C:\Users\nid\usr\SDL2</SDL_PATH>
-  </PropertyGroup>
   <PropertyGroup>
     <IncludePath>$(SDL_PATH)/include;$(IncludePath)</IncludePath>
 	<LibraryPath>$(SDL_PATH)/lib/$(PlatformTarget);$(LibraryPath)</LibraryPath>
@@ -13,12 +10,9 @@
       <AdditionalDependencies>SDL2main.lib;SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(SDL_PATH)\bin\SDL2.dll" "$(OutDir)"</Command>
+      <Command>xcopy /D /E "$(SDL_PATH)\bin\SDL2.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <BuildMacro Include="SDL_PATH">
-      <Value>$(SDL_PATH)</Value>
-    </BuildMacro>
   </ItemGroup>
 </Project>

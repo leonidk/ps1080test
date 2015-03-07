@@ -34,6 +34,7 @@
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="props\Config.props" />
     <Import Project="props\Eigen.props" />
     <Import Project="props\OpenNI2.props" />
     <Import Project="props\SDL2.props" />
@@ -41,6 +42,7 @@
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="props\Config.props" />
     <Import Project="props\Eigen.props" />
     <Import Project="props\OpenNI2.props" />
     <Import Project="props\SDL2.props" />
