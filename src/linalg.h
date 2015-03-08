@@ -1,6 +1,7 @@
 #pragma once
 #include <stdio.h>
-
+#include <type_traits>
+#include <memory>
 struct planeCandidate {
 	double d;
 	float n[3];
@@ -46,4 +47,34 @@ inline void normalize(float *a) {
     a[0] /= norm;
     a[1] /= norm;
     a[2] /= norm;
+}
+
+template <
+	template <typename, typename> class Container,
+	typename Value,
+	typename Allocator = std::allocator<Value>, typename Func >
+	auto imap(const Container<Value, Allocator> & input, const Func &f)
+	-> Container<decltype(f(std::declval<Value>())), std::allocator<decltype(f(std::declval<Value>()))>> {
+	Container<decltype(f(std::declval<Value>())), std::allocator<decltype(f(std::declval<Value>()))>> ret;
+	std::transform(std::begin(input), std::end(input), std::back_inserter(ret), f);
+	//for (const auto & v : input) {
+	//	ret.emplace_back(f(v));
+	//}
+	return ret;
+}
+
+template <
+	template <typename, typename> class Container,
+	typename Value,
+	typename Allocator = std::allocator<Value>,
+	typename Func,
+	typename OutType = std::result_of<Func(Value)>::type >
+	auto imap2(const Container<Value, Allocator> & input, const Func &f)
+	->Container<OutType, std::allocator<OutType>> {
+	Container<OutType, std::allocator<OutType>> ret;
+	std::transform(std::begin(input), std::end(input), std::back_inserter(ret), f);
+	//for (const auto & v : input) {
+	//	ret.emplace_back(f(v));
+	//}
+	return ret;
 }

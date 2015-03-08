@@ -219,6 +219,7 @@ public:
 		std::partial_sort(std::begin(idx), std::begin(idx) + maxPlanes, std::end(idx), [&](const int i1, const int i2) {
 			return planes[i1].size() > planes[i2].size();
 		});
+
 		int realCand = 0;
 		for (; realCand < maxPlanes; realCand++) {
 			if (planes[idx[realCand]].size() < minPts)

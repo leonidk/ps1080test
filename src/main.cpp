@@ -10,25 +10,13 @@
 #define SUBSAMPLE_FACTOR (4)
 #define DIST_THRESH (40)
 
-
-template <
-	template <typename, typename> class Container,
-	typename Value,
-	typename Allocator = std::allocator<Value>, typename Func >
-	auto imap(const Container<Value, Allocator> & input, const Func &f)
-	-> Container<decltype(f(std::declval<Value>())), std::allocator<decltype(f(std::declval<Value>()))>> {
-	Container<decltype(f(std::declval<Value>())), std::allocator<decltype(f(std::declval<Value>()))>> ret;
-	for (const auto & v : input) {
-		ret.emplace_back(f(v));
-	}
-	return ret;
-}
 int main(int argc, char *args[]) {
 	glewExperimental = GL_TRUE;
 	glewInit();
 	int posX = 100, posY = 100, width = 320, height = 240;
 	uint16_t *hDepth = new uint16_t[width * height];
-
+	auto a = std::vector<int>({ 1, 2, 3, 4 });
+	auto b = imap2(a, [](int a) { return (float)a; });
 	width /= SUBSAMPLE_FACTOR;
 	height /= SUBSAMPLE_FACTOR;
 
