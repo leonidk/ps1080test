@@ -65,7 +65,7 @@ int main(int argc, char *args[]) {
 		//subsample camera data & generate data
 		generateHalfImage<uint16_t, SUBSAMPLE_FACTOR>(cam.getDepth(), hDepth, width, height);
 		generatePoints(hDepth, width, height, fx, fy, px,py, points.data());
-		generateNormals<1>(hDepth, width, height, fx, fy, px, py, normals.data());
+		generateNormals_FromDepth<1>(hDepth, width, height, fx, fy, px, py, normals.data());
 
 		auto candidates =  pd.detectPlanes(512, 2.5, width, height, points.data(), normals.data());
 		//auto candidates = pdMS.detectPlanes(512, 0.15f, (float)(0.125 / 64.0), width, height, points.data(), normals.data());
@@ -91,12 +91,12 @@ int main(int argc, char *args[]) {
 		//figure out which plane came from where
 		//auto corrPairs = generateCorrespondencesSVD(candidates, prevPlanes);
 		//auto corrPairs2 = generateCorrespondencesMP(candidates, prevPlanes);
-		//auto trans = icp.runICPIter(10, fx, fy, 0.5, 15, 100, points.data(), normals.data(), pointsPrev.data(), normalsPrev.data());
-
+		//auto transform = icp.runICPIter(10, fx, fy, 0.5, 15, 100, points.data(), normals.data(), pointsPrev.data(), normalsPrev.data());
+		//std::cout << transform << std::endl;
 		//save frame state
-		//prevPlanes = candidates;
-		//normalsPrev = normals;
-		//pointsPrev = points;
+		prevPlanes = candidates;
+		normalsPrev = normals;
+		pointsPrev = points;
 
 		SDL_Event e;
 		if (SDL_PollEvent(&e)) {

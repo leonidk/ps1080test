@@ -59,7 +59,7 @@ Eigen::Matrix4f computeLinearApproxICP(
 			continue;
 		if (normalsDst[3 * i + 2] == 0)
 			continue;
-		if (square((int)depthSrc[3 * i + 2] - (int)depthSrc[3 * i + 2]) > distThresh)
+		if (square(depthSrc[3 * i + 2] - depthSrc[3 * i + 2]) > distThresh)
 			continue;
 		if (sqrNorm(normalsSrc + 3 * i, normalsDst + 3 * i) > normThresh)
 			continue;
