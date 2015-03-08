@@ -52,7 +52,7 @@ int main(int argc, char *args[]) {
 		memset(points.data(), 0, sizeof(float) * width * height * 3);
 
 		//subsample camera data & generate data
-		generateHalfImage<uint16_t, SUBSAMPLE_FACTOR>(cam.getDepth(), hDepth, width, height);
+		generateHalfImageDepth<uint16_t, SUBSAMPLE_FACTOR>(cam.getDepth(), hDepth, width, height);
 		generatePoints(hDepth, width, height, fx, fy, px,py, points.data());
 		generateNormals_FromDepth<1>(hDepth, width, height, fx, fy, px, py, normals.data());
 
@@ -81,8 +81,8 @@ int main(int argc, char *args[]) {
 		//figure out which plane came from where
 		//auto corrPairs = generateCorrespondencesSVD(candidates, prevPlanes);
 		//auto corrPairs2 = generateCorrespondencesMP(candidates, prevPlanes);
-		//auto transform = icp.runICPIter(10, fx, fy, 0.5, 15, 100, points.data(), normals.data(), pointsPrev.data(), normalsPrev.data());
-		//std::cout << transform << std::endl;
+		auto transform = icp.runICPIter(10, fx, fy, 0.5, 15, 100, points.data(), normals.data(), pointsPrev.data(), normalsPrev.data());
+		std::cout << transform << std::endl;
 		//save frame state
 		prevPlanes = candidates;
 		normalsPrev = normals;

@@ -25,6 +25,27 @@ void generateHalfImage(const T *in, T *out, const int outW, const int outH) {
     }
 }
 
+
+template <typename T, int size>
+void generateHalfImageDepth(const T *in, T *out, const int outW, const int outH) {
+	const auto inH = size * outH;
+	const auto inW = size * outW;
+	for (int i = 0; i < inH; i += size) {
+		for (int j = 0; j < inW; j += size) {
+			auto tout = 0;
+			auto cnt = 0;
+			for (int m = 0; m < size; m++) {
+				for (int n = 0; n < size; n++) {
+					const auto val = in[(i + m) * inW + (j + n)];
+					tout += val ? val : 0;
+					cnt += val ? 1 : 0;
+				}
+			}
+			out[(i / size) * outW + (j / size)] = cnt ? (int)std::round(tout / ((float)cnt)) : 0 ;
+		}
+	}
+}
+
 template <typename T>
 T square(const T a) {
     return a * a;
