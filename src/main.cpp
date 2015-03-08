@@ -53,7 +53,8 @@ int main(int argc, char *args[]) {
 	auto fy = cam.getFy() / SUBSAMPLE_FACTOR;
 	auto px = cam.getPx() / SUBSAMPLE_FACTOR;
 	auto py = cam.getPy() / SUBSAMPLE_FACTOR;
-	planeDetector<15> pd;
+	planeDetectorFast<15> pd;
+	//planeDetectorDisjoint<15> pd;
 	planeDetectorMS pdMS;
 	iteratedICP icp(width, height);
 	while (camRunning) {
@@ -69,6 +70,7 @@ int main(int argc, char *args[]) {
 
 		auto candidates =  pd.detectPlanes(512, 2.5, width, height, points.data(), normals.data());
 		//auto candidates = pdMS.detectPlanes(512, 0.15f, (float)(0.125 / 64.0), width, height, points.data(), normals.data());
+
 		memset(planeDebugImage_Color.data(), 0, width*height * 3);
 		for (int i = 0; i < candidates.size(); i++) {
 			const auto color = visWin.getNewColor(i);

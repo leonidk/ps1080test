@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <algorithm>
 #include <unordered_map>
 #include <unordered_set>
 #include "linalg.h"
@@ -31,9 +32,9 @@ private:
 };
 
 template <int numAngles>
-class planeDetector {
+class planeDetectorDisjoint {
 public:
-	planeDetector() : numAngleSym(2 * numAngles + 1)
+	planeDetectorDisjoint() : numAngleSym(2 * numAngles + 1)
 	{
 	}
 	std::vector<planeCandidate> detectPlanes(const int minPts, const float stdDev, const int width, const int height, const float *points, const float *normals)
@@ -165,4 +166,109 @@ private:
 	int numAngleSym;
 	uint16_t debugImg[(2 * numAngles + 1)*(2 * numAngles + 1)];
 	std::vector<planeCandidate> planes[(2 * numAngles + 1)*(2 * numAngles + 1)];
+};
+
+template <int numAngles>
+class planeDetectorFast {
+public:
+	planeDetectorFast() : numAngleSym(2 * numAngles + 1), idx((2 * numAngles + 1)*(2 * numAngles + 1))
+	{
+	}
+	std::vector<planeCandidate> detectPlanes(const int minPts, const float stdDev, const int width, const int height, const float *points, const float *normals)
+	{
+		auto maxPlanes = 10;
+		std::vector<planeCandidate> returnData;
+		for (auto &p : planes) {
+			p.clear();
+		}
+		memset(debugImg, 0, 2 * numAngleSym * numAngleSym);
+		auto numPixels = height*width;
+		for (int i = 0; i < numPixels; i++) {
+			if (normals[3 * i + 2] != 0) {
+				int idx1 = numAngles + (int)(normals[3 * i + 0] * numAngles);
+				int idx2 = numAngles + (int)(normals[3 * i + 1] * numAngles);
+				double d = -normals[3 * i] * points[3 * i] - normals[3 * i + 1] * points[3 * i + 1] - normals[3 * i + +2] * points[3 * i + 2];
+				planes[numAngleSym * idx2 + idx1].push_back({ d, { normals[3 * i], normals[3 * i + 1], normals[3 * i + 2] } });
+			}
+		}
+		for (int i = 0; i < numAngleSym * numAngleSym; i++)
+			idx[i] = i;
+		auto xySize = [&](int x, int y) { return planes[y*numAngleSym + x].size(); };
+		for (int i = 1; i < numAngleSym - 1; i++) {
+			for (int j = 1; j < numAngleSym - 1; j++) {
+				auto c = xySize(j, i);
+				//if (c < minPts) idx[i*numAngleSym + j]=0;
+				if (c < xySize(j - 1, i - 1))
+					idx[i * numAngleSym + j] = 0;
+				if (c < xySize(j + 0, i - 1))
+					idx[i * numAngleSym + j] = 0;
+				if (c < xySize(j + 1, i - 1))
+					idx[i * numAngleSym + j] = 0;
+				if (c < xySize(j - 1, i + 0))
+					idx[i * numAngleSym + j] = 0;
+				if (c < xySize(j + 1, i + 0))
+					idx[i * numAngleSym + j] = 0;
+				if (c < xySize(j - 1, i + 1))
+					idx[i * numAngleSym + j] = 0;
+				if (c < xySize(j + 0, i + 1))
+					idx[i * numAngleSym + j] = 0;
+				if (c < xySize(j + 1, i + 1))
+					idx[i * numAngleSym + j] = 0;
+			}
+		}
+		std::partial_sort(std::begin(idx), std::begin(idx) + maxPlanes, std::end(idx), [&](const int i1, const int i2) {
+			return planes[i1].size() > planes[i2].size();
+		});
+		int realCand = 0;
+		for (; realCand < maxPlanes; realCand++) {
+			if (planes[idx[realCand]].size() < minPts)
+				break;
+		}
+		for (auto i = idx.begin(); i < (idx.begin() + maxPlanes); i++) {
+			std::vector<planeCandidate> candList;
+			int currY = (int)(*i / numAngleSym);
+			int currX = (int)(*i % numAngleSym);
+			candList.insert(candList.end(), planes[currY * numAngleSym + currX].begin(), planes[currY * numAngleSym + currX].end());
+			if (currY - 1 >= 0)
+				candList.insert(candList.end(), planes[(currY - 1) * numAngleSym + currX].begin(), planes[(currY - 1) * numAngleSym + currX].end());
+			if (currY + 1 < numAngleSym)
+				candList.insert(candList.end(), planes[(currY + 1) * numAngleSym + currX].begin(), planes[(currY + 1) * numAngleSym + currX].end());
+			if (currX - 1 >= 0)
+				candList.insert(candList.end(), planes[(currY)* numAngleSym + currX - 1].begin(), planes[(currY)* numAngleSym + currX - 1].end());
+			if (currX + 1 < numAngleSym)
+				candList.insert(candList.end(), planes[(currY)* numAngleSym + currX + 1].begin(), planes[(currY)* numAngleSym + currX + 1].end());
+			//Idea1: lets GMM this?
+			//Idea2: sort lists by 'd'
+			//Idea2: linear search, runnnig average, when startIdx < Mean -2sigma, stop. Repeat
+			//Idea2: Use threshold instead of computing sigma
+			//Idea3: be lazy
+			if (candList.size() < minPts)
+				continue;
+			planeCandidate avgCand = { 0, { 0, 0, 0 } };
+			for (const auto c : candList) {
+				avgCand.d += c.d;
+				avgCand.n[0] += c.n[0];
+				avgCand.n[1] += c.n[1];
+				avgCand.n[2] += c.n[2];
+			}
+			avgCand.d /= candList.size();
+			avgCand.n[0] /= candList.size();
+			avgCand.n[1] /= candList.size();
+			avgCand.n[2] /= candList.size();
+			normalize(avgCand.n);
+			avgCand.stddev = 25.0f;
+			returnData.push_back(std::move(avgCand));
+			debugImg[*i] = (uint16_t)planes[*i].size();
+		}
+		return returnData;
+	}
+	uint16_t* getDebugImg()
+	{
+		return debugImg;
+	}
+private:
+	size_t numAngleSym;
+	uint16_t debugImg[(2 * numAngles + 1)*(2 * numAngles + 1)];
+	std::vector<planeCandidate> planes[(2 * numAngles + 1)*(2 * numAngles + 1)];
+	std::vector<int> idx;
 };
