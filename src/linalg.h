@@ -47,7 +47,7 @@ void generateHalfImageDepth(const T *in, T *out, const int outW, const int outH)
 }
 
 template <typename T>
-T square(const T a) {
+inline T square(const T a) {
     return a * a;
 }
 
