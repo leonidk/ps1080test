@@ -9,7 +9,7 @@ struct planeCandidate {
 };
 
 template <typename T, int size>
-void generateHalfImage(const T *in, T *out, const int outW, const int outH) {
+inline void generateHalfImage(const T *in, T *out, const int outW, const int outH) {
     const auto inH = size * outH;
     const auto inW = size * outW;
     for (int i = 0; i < inH; i += size) {
@@ -27,7 +27,7 @@ void generateHalfImage(const T *in, T *out, const int outW, const int outH) {
 
 
 template <typename T, int size>
-void generateHalfImageDepth(const T *in, T *out, const int outW, const int outH) {
+inline void generateHalfImageDepth(const T *in, T *out, const int outW, const int outH) {
 	const auto inH = size * outH;
 	const auto inW = size * outW;
 	for (int i = 0; i < inH; i += size) {
@@ -74,7 +74,7 @@ template <
 	template <typename, typename> class Container,
 	typename Value,
 	typename Allocator = std::allocator<Value>, typename Func >
-	auto imap(const Container<Value, Allocator> & input, const Func &f)
+	inline auto imap(const Container<Value, Allocator> & input, const Func &f)
 	-> Container<decltype(f(std::declval<Value>())), std::allocator<decltype(f(std::declval<Value>()))>> {
 	Container<decltype(f(std::declval<Value>())), std::allocator<decltype(f(std::declval<Value>()))>> ret;
 	std::transform(std::begin(input), std::end(input), std::back_inserter(ret), f);
@@ -90,7 +90,7 @@ template <
 	typename Allocator = std::allocator<Value>,
 	typename Func,
 	typename OutType = std::result_of<Func(Value)>::type >
-	auto imap2(const Container<Value, Allocator> & input, const Func &f)
+	inline auto imap2(const Container<Value, Allocator> & input, const Func &f)
 	->Container<OutType, std::allocator<OutType>> {
 	Container<OutType, std::allocator<OutType>> ret;
 	std::transform(std::begin(input), std::end(input), std::back_inserter(ret), f);

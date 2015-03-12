@@ -32,7 +32,7 @@ protected:
 	float px, py, fx, fy;
 };
 
-void generatePoints(const uint16_t *depth, const int width, const int height, const float fx, const float fy, const float px, const float py, float *points) {
+inline void generatePoints(const uint16_t *depth, const int width, const int height, const float fx, const float fy, const float px, const float py, float *points) {
 	auto halfX = px;
 	auto halfY = py;
 	auto cX = 1.0f / fx;
@@ -48,7 +48,7 @@ void generatePoints(const uint16_t *depth, const int width, const int height, co
 }
 
 template <int size>
-void generateNormals(const uint16_t *depth, const int width, const int height, const float fx, const float fy, const float px, const float py, float *normals) {
+inline void generateNormals(const uint16_t *depth, const int width, const int height, const float fx, const float fy, const float px, const float py, float *normals) {
 	const auto cX = 1.0f / fx;
 	const auto cY = 1.0f / fy;
 	const auto xStep = cX * size;
@@ -142,7 +142,7 @@ void generateNormals(const uint16_t *depth, const int width, const int height, c
 }
 
 template <int size>
-void generateNormals_FromDepth(const uint16_t *depth, const int width, const int height, const float fx, const float fy, const float ppx, const float ppy, float *normals) {
+inline void generateNormals_FromDepth(const uint16_t *depth, const int width, const int height, const float fx, const float fy, const float ppx, const float ppy, float *normals) {
 	const auto cX = 1.0f / fx;
 	const auto cY = 1.0f / fy;
 	const auto xStep = cX * size;
@@ -260,7 +260,7 @@ void generateNormals_FromDepth(const uint16_t *depth, const int width, const int
 
 
 template <int size>
-void generateNormals_FromDepthInv(const uint16_t *depth, const int width, const int height, const float fx, const float fy, const float ppx, const float ppy, float *normals) {
+inline  void generateNormals_FromDepthInv(const uint16_t *depth, const int width, const int height, const float fx, const float fy, const float ppx, const float ppy, float *normals) {
 	const auto cX = 1.0f / fx;
 	const auto cY = 1.0f / fy;
 	const auto xStep = cX * size;
@@ -371,7 +371,7 @@ void generateNormals_FromDepthInv(const uint16_t *depth, const int width, const 
 }
 
 template <int size>
-void generateNormals_fromPoints(const float *points, const int width, const int height, float *normals) {
+inline void generateNormals_fromPoints(const float *points, const int width, const int height, float *normals) {
 	for (int i = size; i < height - size; i++) {
 		for (int j = size; j < width - size; j++) {
 			if (!points[3 * (i * width + j) + 2])
