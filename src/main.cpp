@@ -1,9 +1,10 @@
 #include "ONICamera.h"
-#include "linalg.h"
+#include "ImageFunc.h"
 #include "ICP.h"
 #include "Drawing.h"
 #include "detect.h"
 #include "detectMS.h"
+
 #define GLEW_STATIC
 #include <GL/glew.h>
 //#include "argh.h"
@@ -17,8 +18,6 @@ int main(int argc, char *args[]) {
 
 	int posX = 100, posY = 100, width = 320, height = 240;
 	uint16_t *hDepth = new uint16_t[width * height];
-	auto a = std::vector<int>({ 1, 2, 3, 4 });
-	auto b = imap2(a, [](int a) { return (float)a; });
 	width /= SUBSAMPLE_FACTOR;
 	height /= SUBSAMPLE_FACTOR;
 
@@ -44,8 +43,8 @@ int main(int argc, char *args[]) {
 	auto fy = cam.getFy() / SUBSAMPLE_FACTOR;
 	auto px = cam.getPx() / SUBSAMPLE_FACTOR;
 	auto py = cam.getPy() / SUBSAMPLE_FACTOR;
-	planeDetectorFast<15> pd;
-	//planeDetectorDisjoint<15> pd;
+	//planeDetectorFast<15> pd;
+	planeDetectorDisjoint<15> pd;
 	planeDetectorMS pdMS;
 	iteratedICP icp(width, height);
 	while (!quit) {
@@ -55,16 +54,23 @@ int main(int argc, char *args[]) {
 		memset(points.data(), 0, sizeof(float) * width * height * 3);
 
 		//subsample camera data & generate data
-		generateHalfImageDepth<uint16_t, SUBSAMPLE_FACTOR>(cam.getDepth(), hDepth, width, height);
+		generateHalfImageDepthMed<uint16_t, SUBSAMPLE_FACTOR>(cam.getDepth(), hDepth, width, height);
 		generatePoints(hDepth, width, height, fx, fy, px,py, points.data());
 		generateNormals_FromDepth<1>(hDepth, width, height, fx, fy, px, py, normals.data());
 		//generateNormals_fromPoints<1>(points.data(), width, height, normals.data());
+
+		// THNKING OF GENERAL IDEAS
+		//IDEA: QUICK_CLUSTER. partion-based clustering.
+		// IDEA: Iterate top-down and bottom up. Top-down to get variances. Bottom up for form subclusters. 
+		// THINKING OF PLANES:
+		//IDEA: Grid-based clustering in general(x,y,d)? Or at least for 2D normals. Partion-based for d values
+		//IDEA: What to do with 
 
 
 		auto candidates =  pd.detectPlanes(512, 2.5, width, height, points.data(), normals.data());
 		//auto candidates = pdMS.detectPlanes(512, 0.15f, (float)(0.125 / 64.0), width, height, points.data(), normals.data());
 
-		memset(planeDebugImage_Color.data(), 0, width*height * 3);
+		memset(planeDebugImage_Color.data(), 0, width*height * 4);
 		for (int i = 0; i < candidates.size(); i++) {
 			const auto color = getNewColor(i);
 			const auto plane = candidates[i];
@@ -87,7 +93,7 @@ int main(int argc, char *args[]) {
 		//figure out which plane came from where
 		//auto corrPairs = generateCorrespondencesSVD(candidates, prevPlanes);
 		//auto corrPairs2 = generateCorrespondencesMP(candidates, prevPlanes);
-		auto transform = icp.runICPIter(10, fx, fy, 0.5, 15, 100, points.data(), normals.data(), pointsPrev.data(), normalsPrev.data());
+		//auto transform = icp.runICPIter(10, fx, fy, 0.5, 15, 100, points.data(), normals.data(), pointsPrev.data(), normalsPrev.data());
 		//std::cout << transform << std::endl;
 		//save frame state
 		prevPlanes = candidates;

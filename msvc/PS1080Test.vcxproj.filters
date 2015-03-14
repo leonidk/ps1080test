@@ -5,10 +5,12 @@
     <ClInclude Include="..\src\detect.h" />
     <ClInclude Include="..\src\Drawing.h" />
     <ClInclude Include="..\src\ICP.h" />
-    <ClInclude Include="..\src\linalg.h" />
     <ClInclude Include="..\src\nanoflann.hpp" />
     <ClInclude Include="..\src\ONICamera.h" />
     <ClInclude Include="..\src\detectMS.h" />
+    <ClInclude Include="..\src\linalg.h" />
+    <ClInclude Include="..\src\ImageFunc.h" />
+    <ClInclude Include="..\src\plane.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\main.cpp" />

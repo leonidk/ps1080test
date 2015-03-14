@@ -1,14 +1,7 @@
 #pragma once
 #include <vector>
-//#include <memory>
-//#include <unordered_map>
-//#include <map>
-//#include <unordered_set>
-//#include <cmath>
-#include "linalg.h"
+#include "plane.h"
 #include "nanoflann.hpp"
-
-
 
 struct PointCloud
 {
@@ -117,4 +110,9 @@ public:
 	}
 
 private:
+	template <typename T>
+	inline T square(const T a) {
+		return a * a;
+	}
+
 };

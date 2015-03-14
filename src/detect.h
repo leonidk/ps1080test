@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <unordered_map>
 #include <unordered_set>
-#include "linalg.h"
+#include "plane.h"
 
 class DisjointSets {
 public:

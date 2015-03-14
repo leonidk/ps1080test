@@ -5,6 +5,7 @@
 #define GLEW_STATIC
 #include <GL/glew.h>
 #include <memory>
+#include "linalg.h"
 
 static std::array<uint8_t, 3> HsvToRgb(std::array<uint8_t, 3> hsv)
 {
@@ -142,9 +143,10 @@ public:
 		: x(x), y(y), w(width), h(height), depth_(width*height), rgb_(3 * width*height), normals_(width*height), points_(3 * width*height), vbo_(5 * width*height), elements(width*height)
 	{
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 		SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 		win = SDL_CreateWindow(name, x, y, (int)(width*winScale), (int)(height*winScale), SDL_WINDOW_OPENGL);
 		context = SDL_GL_CreateContext(win);
 		SDL_GL_MakeCurrent(win, context);
@@ -211,7 +213,33 @@ public:
 	}
 	void handleEvent(const SDL_Event & e){
 		if (SDL_GetWindowFromID(e.window.windowID) == win) {
-			//std::cout << "my win" << std::endl;
+			if (e.type == SDL_MOUSEMOTION) {
+				if (e.motion.state & SDL_BUTTON_LMASK) {
+					sceneTrans[3][0] += e.motion.xrel;
+					sceneTrans[3][1] -= e.motion.yrel;
+				} else if (e.motion.state & SDL_BUTTON_RMASK) {
+					using namespace linalg;
+					using namespace linalg::aliases;
+
+					float4 xr(std::sin(e.motion.xrel / 20.0), 0, 0, std::cos(e.motion.xrel / 20.0));
+					float4 yr(0,std::sin(e.motion.yrel / 20.0), 0, std::cos(e.motion.yrel / 20.0));
+					auto combined = qmul(xr,yr);
+					auto qx = qxdir(combined);
+					auto qy = qydir(combined);
+					auto qz = qzdir(combined);
+
+					sceneTrans[0] = { qx[0], qx[1], qx[2], 0 };
+					sceneTrans[1] = { qy[0], qy[1], qy[2], 0 };
+					sceneTrans[2] = { qz[0], qz[1], qz[2], 0 };
+
+
+				} else if (e.motion.state & SDL_BUTTON_MMASK) {
+					sceneTrans[3][0] += e.motion.xrel;
+					sceneTrans[3][1] -= e.motion.yrel;
+				}
+			} else if (e.type == SDL_MOUSEWHEEL) {
+				sceneTrans[3][2] += 50 * e.wheel.y;
+			}
 		}
 	}
 	void setPoints(float *points, float * normals, uint8_t * rgb) {																
@@ -219,7 +247,7 @@ public:
 		glUseProgram(shaderProgram);																						  
 		elements.clear();																						  				
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);																			  		
-		glClear(GL_COLOR_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		int x = 0, y = 0;																									
 		for (int i = 0; i < w*h; i++) {																						
 			vbo_[5 * i] = points[3 * i];														
@@ -242,13 +270,15 @@ public:
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);																			  
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint)*elements.size(), elements.data(), GL_STREAM_DRAW);
 		GLuint tex;	
-		float vFov = 1.0, ar = 1.333, nearclip = 500, farclip = 650000;
+		float vFov = 1.2, ar = 1.333, nearclip = 100, farclip = 10000;
 		const auto yf = 1 / std::tan(vFov / 2);
 		const auto xf = yf / ar;
-		const auto dz = nearclip - farclip;
-		float cameraMat[16] = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1/80.0, 0 };
-		glUniformMatrix4fv(cameraAttrib, 1, false, cameraMat);
-
+		const auto dz = farclip - nearclip;
+		
+		float cameraMat[16] = { xf, 0, 0, 0, 0, yf, 0, 0, 0, 0, -(farclip + nearclip) / dz, -2*nearclip*farclip/dz, 0, 0, -1, 0 };
+		//float cameraMat[16] = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, -1, 0, 0, 0, 1/80.0, 0 };
+		glUniformMatrix4fv(cameraAttrib, 1, GL_TRUE, cameraMat);
+		glUniformMatrix4fv(transAttrib, 1, GL_FALSE, (float*)&sceneTrans);
 		{																													  
 			static std::vector<uint8_t> tmp(3 * w*h);																		  
 			uint8_t *dest = (uint8_t *)tmp.data();																			  
@@ -263,8 +293,11 @@ public:
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, tmp.data());							  
   
-		}																													  
+		}										
+		glEnable(GL_DEPTH_TEST);
+
 		glDrawElements(GL_POINTS, elements.size(), GL_UNSIGNED_INT, 0);
+		glDisable(GL_DEPTH_TEST);
 		glDeleteTextures(1, &tex);																						  		
 
 		printOpenGLError();
@@ -290,7 +323,8 @@ private:
 	std::vector<uint8_t> rgb_;
 
 	std::vector<float> vbo_;
-	std::vector<GLuint> elements;				
+	std::vector<GLuint> elements;		
+	linalg::aliases::float4x4 sceneTrans;
 	size_t w, h;
 	int x, y;
 	SDL_Window * win;
@@ -394,6 +428,7 @@ private:
 	}
 	void initGLPoints()
 	{
+		sceneTrans = { { 1, 0, 0, 0 }, { 0, 1, 0, 0 }, { 0, 0, 1, 0 }, { 0, 0, 0, 1 } };
 		glewExperimental = GL_TRUE;
 		GLenum glewErr = glewInit();
 		if (GLEW_OK != glewErr)
@@ -411,12 +446,9 @@ private:
 			"uniform mat4 camera;"
 			"void main() {"
 			"   Texcoord = texcoord;"
-			"   float scaledZ = position.z/250;"
 			"   gl_PointSize = 7.0;"//clamp(scaledZ,0.25,8);"
-			"   vec2 xy = 2.0*position.xy/position.z;"
-			"   xy.x = xy.x*3.0/4.0;"
-			"   xy.y = -xy.y;"
-			"   gl_Position = camera*vec4(position,1.0);" //vec4(xy, 1.0, 1.0)
+			" vec4 outp = camera*trans*vec4(position.x,-position.yz,1.0);"
+			"   gl_Position = outp;"//vec4(outp.xy,1.0,1.0);" //vec4(xy, 1.0, 1.0)
 			"}";
 		const GLchar* fragmentSource =
 			"#version 430 core\n"
