@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <type_traits>
 #include <memory>
-
+#include <array>
 
 
 template <typename T, int size>
@@ -631,4 +631,53 @@ template <
 	//	ret.emplace_back(f(v));
 	//}
 	return ret;
+}
+
+static std::array<uint8_t, 3> HsvToRgb(std::array<uint8_t, 3> hsv)
+{
+	std::array<uint8_t, 3> rgb;
+	unsigned char region, remainder, p, q, t;
+
+	if (hsv[1] == 0)
+	{
+		rgb[0] = hsv[2];
+		rgb[1] = hsv[2];
+		rgb[2] = hsv[2];
+		return rgb;
+	}
+
+	region = hsv[0] / 43;
+	remainder = (hsv[0] - (region * 43)) * 6;
+
+	p = (hsv[2] * (255 - hsv[1])) >> 8;
+	q = (hsv[2] * (255 - ((hsv[1] * remainder) >> 8))) >> 8;
+	t = (hsv[2] * (255 - ((hsv[1] * (255 - remainder)) >> 8))) >> 8;
+
+	switch (region)
+	{
+	case 0:
+		rgb[0] = hsv[2]; rgb[1] = t; rgb[2] = p;
+		break;
+	case 1:
+		rgb[0] = q; rgb[1] = hsv[2]; rgb[2] = p;
+		break;
+	case 2:
+		rgb[0] = p; rgb[1] = hsv[2]; rgb[2] = t;
+		break;
+	case 3:
+		rgb[0] = p; rgb[1] = q; rgb[2] = hsv[2];
+		break;
+	case 4:
+		rgb[0] = t; rgb[1] = p; rgb[2] = hsv[2];
+		break;
+	default:
+		rgb[0] = hsv[2]; rgb[1] = p; rgb[2] = q;
+		break;
+	}
+
+	return rgb;
+}
+
+static std::array<uint8_t, 3> getNewColor(int value, int total = 10) {
+	return HsvToRgb({ (uint8_t)(255.0f*(static_cast<float>(value) / total)), 128, 255 });
 }

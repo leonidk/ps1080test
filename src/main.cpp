@@ -21,11 +21,11 @@ int main(int argc, char *args[]) {
 	width /= SUBSAMPLE_FACTOR;
 	height /= SUBSAMPLE_FACTOR;
 
-	SDLWrapperGL depthWin("Depth", posX, posY, width, height, 8);
-	SDLWrapperGL planesWin("PlanesColor", posX, posY, width, height, 8);
-	SDLWrapperGL normalWin("Normals", posX + width * 8, posY, width, height, 8);
-	SDLWrapperGL visWin("Planes", posX + width * 2 * 8, posY, 31, 31, 15); 
-	SDLWrapperGL glTest("OpenGLWindow", posX, posY + height * 8, width, height, 8, SDLWrapperGL::DRAW_MODE_POINTS);
+	Draw2DImage depthWin("Depth", posX, posY, width, height, 8);
+	Draw2DImage planesWin("PlanesColor", posX, posY, width, height, 8);
+	Draw2DImage normalWin("Normals", posX + width * 8, posY, width, height, 8);
+	Draw2DImage visWin("Planes", posX + width * 2 * 8, posY, 31, 31, 15); 
+	Draw3DImage glTest("OpenGLWindow", posX, posY + height * 8, width, height, 8, Draw3DImage::DRAW_MODE_POINTS);
 
 
 	std::vector<float> points(3 * width * height, 0);
@@ -43,8 +43,9 @@ int main(int argc, char *args[]) {
 	auto fy = cam.getFy() / SUBSAMPLE_FACTOR;
 	auto px = cam.getPx() / SUBSAMPLE_FACTOR;
 	auto py = cam.getPy() / SUBSAMPLE_FACTOR;
-	//planeDetectorFast<15> pd;
-	planeDetectorDisjoint<15> pd;
+	//planeDetectorFast<15> pdC;
+	planeDetectorDisjointModes<15> pd;
+	//planeDetectorDisjointGMM<15> pd;
 	planeDetectorMS pdMS;
 	iteratedICP icp(width, height);
 	while (!quit) {
@@ -54,20 +55,13 @@ int main(int argc, char *args[]) {
 		memset(points.data(), 0, sizeof(float) * width * height * 3);
 
 		//subsample camera data & generate data
-		generateHalfImageDepthMed<uint16_t, SUBSAMPLE_FACTOR>(cam.getDepth(), hDepth, width, height);
+		generateHalfImageDepth<uint16_t, SUBSAMPLE_FACTOR>(cam.getDepth(), hDepth, width, height);
 		generatePoints(hDepth, width, height, fx, fy, px,py, points.data());
 		generateNormals_FromDepth<1>(hDepth, width, height, fx, fy, px, py, normals.data());
 		//generateNormals_fromPoints<1>(points.data(), width, height, normals.data());
 
-		// THNKING OF GENERAL IDEAS
-		//IDEA: QUICK_CLUSTER. partion-based clustering.
-		// IDEA: Iterate top-down and bottom up. Top-down to get variances. Bottom up for form subclusters. 
-		// THINKING OF PLANES:
-		//IDEA: Grid-based clustering in general(x,y,d)? Or at least for 2D normals. Partion-based for d values
-		//IDEA: What to do with 
-
-
-		auto candidates =  pd.detectPlanes(512, 2.5, width, height, points.data(), normals.data());
+		//auto candidatesC = pdC.detectPlanes(512, 3.0f, width, height, points.data(), normals.data());
+		auto candidates = pd.detectPlanes(512, 100.0f, width, height, points.data(), normals.data());
 		//auto candidates = pdMS.detectPlanes(512, 0.15f, (float)(0.125 / 64.0), width, height, points.data(), normals.data());
 
 		memset(planeDebugImage_Color.data(), 0, width*height * 4);
@@ -89,7 +83,7 @@ int main(int argc, char *args[]) {
 		normalWin.setNormals(normals.data());
 		visWin.setGrayScale<1>(pd.getDebugImg());
 		planesWin.setRGBA (planeDebugImage_Color.data());
-		glTest.setPoints(points.data(), normals.data(), nullptr);
+		glTest.setPoints(points.data(), normals.data(), nullptr,false);
 		//figure out which plane came from where
 		//auto corrPairs = generateCorrespondencesSVD(candidates, prevPlanes);
 		//auto corrPairs2 = generateCorrespondencesMP(candidates, prevPlanes);

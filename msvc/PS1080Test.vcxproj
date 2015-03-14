@@ -177,6 +177,9 @@
     <ClInclude Include="..\src\detect.h" />
     <ClInclude Include="..\src\detectMS.h" />
     <ClInclude Include="..\src\Drawing.h" />
+    <ClInclude Include="..\src\Drawing3D_SDL.h" />
+    <ClInclude Include="..\src\Drawing2D_SDL.h" />
+    <ClInclude Include="..\src\Drawing2D_SDL_GL.h" />
     <ClInclude Include="..\src\ICP.h" />
     <ClInclude Include="..\src\ImageFunc.h" />
     <ClInclude Include="..\src\linalg.h" />

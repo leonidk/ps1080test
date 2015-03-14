@@ -102,6 +102,7 @@ public:
 				pc.n[1] = kv.first.y;
 				pc.n[2] = sqrtf(1.0f - square(pc.n[0]) - square(pc.n[1]));
 				pc.stddev = 25;
+				pc.cnt = kv.second;
 				returnData.push_back(pc);
 			}
 		}
