@@ -1,7 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include <math.h>
-
+#include <stddef.h>
 class Camera {
 public:
 	virtual bool Start() = 0;

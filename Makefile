@@ -2,7 +2,7 @@
 # The name of the executable to be created
 BIN_NAME := ps1080
 # Compiler used
-CXX ?= clang++
+CXX ?= g++
 # Extension of source files used in the project
 SRC_EXT = cpp
 # Path to the source directory, relative to the makefile
@@ -11,6 +11,7 @@ SRC_PATH = ./src
 LIBS = eigen3 libopenni2 sdl2 SDL2_image glew
 # General compiler flags
 COMPILE_FLAGS = -std=c++11 -Wall -Wextra -g
+#COMPILE_FLAGS = -std=c++11 -g -w  
 # Additional release-specific flags
 RCOMPILE_FLAGS = -D NDEBUG -march=native -O3
 # Additional debug-specific flags

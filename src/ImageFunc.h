@@ -3,7 +3,9 @@
 #include <type_traits>
 #include <memory>
 #include <array>
-
+#include <cmath>
+#include <algorithm>
+#include "linalg.h"
 
 template <typename T, int size>
 inline void generateHalfImage(const T *in, T *out, const int outW, const int outH) {
@@ -304,7 +306,7 @@ inline void generateNormals_FromDepth(const uint16_t *depth, const int width, co
 			if (!depth[i * width + j])
 				continue;
 			const auto cDepth = depth[i * width + j];
-			float pc[] = { cX*(j - halfX)*cDepth, cY*(i - halfY)*cDepth, cDepth };
+			float pc[] = { cX*(j - halfX)*cDepth, cY*(i - halfY)*cDepth, (float)cDepth };
 			float outNorm[3] = { 0, 0, 0 };
 			int count = 0;
 
@@ -313,8 +315,8 @@ inline void generateNormals_FromDepth(const uint16_t *depth, const int width, co
 				const auto yDepth = depth[(i + size) * width + j];
 				const auto diffXZ = xDepth - cDepth;
 				const auto diffYZ = yDepth - cDepth;
-				float px[] = { cX*(j - halfX + size)*xDepth, cY*(i - halfY)*xDepth, xDepth };
-				float py[] = { cX*(j - halfX)*yDepth, cY*(i - halfY + size)*yDepth, yDepth };
+				float px[] = { cX*(j - halfX + size)*xDepth, cY*(i - halfY)*xDepth, (float)xDepth };
+				float py[] = { cX*(j - halfX)*yDepth, cY*(i - halfY + size)*yDepth, (float)yDepth };
 
 				// cX*(5*z +j*(z-z2));
 				float v1[] = { px[0] - pc[0], px[1] - pc[1], px[2] - pc[2] };
@@ -340,8 +342,8 @@ inline void generateNormals_FromDepth(const uint16_t *depth, const int width, co
 				const auto yDepth = depth[(i + size) * width + j];
 				const auto diffXZ = xDepth - cDepth;
 				const auto diffYZ = yDepth - cDepth;
-				float px[] = { cX*(j - halfX - size)*xDepth, cY*(i - halfY)*xDepth, xDepth };
-				float py[] = { cX*(j - halfX)*yDepth, cY*(i - halfY + size)*yDepth, yDepth };
+				float px[] = { cX*(j - halfX - size)*xDepth, cY*(i - halfY)*xDepth, (float)xDepth };
+				float py[] = { cX*(j - halfX)*yDepth, cY*(i - halfY + size)*yDepth, (float)yDepth };
 
 				// cX*(5*z +j*(z-z2));
 				float v1[] = { pc[0] - px[0], pc[1] - px[1], pc[2] - px[2] };
@@ -360,8 +362,8 @@ inline void generateNormals_FromDepth(const uint16_t *depth, const int width, co
 				const auto yDepth = depth[(i - size) * width + j];
 				const auto diffXZ = xDepth - cDepth;
 				const auto diffYZ = yDepth - cDepth;
-				float px[] = { cX*(j - halfX + size)*xDepth, cY*(i - halfY)*xDepth, xDepth };
-				float py[] = { cX*(j - halfX)*yDepth, cY*(i - halfY - size)*yDepth, yDepth };
+				float px[] = { cX*(j - halfX + size)*xDepth, cY*(i - halfY)*xDepth, (float)xDepth };
+				float py[] = { cX*(j - halfX)*yDepth, cY*(i - halfY - size)*yDepth, (float)yDepth };
 
 				// cX*(5*z +j*(z-z2));
 				float v1[] = { px[0] - pc[0], px[1] - pc[1], px[2] - pc[2] };
@@ -380,8 +382,8 @@ inline void generateNormals_FromDepth(const uint16_t *depth, const int width, co
 				const auto yDepth = depth[(i - size) * width + j];
 				const auto diffXZ = xDepth - cDepth;
 				const auto diffYZ = yDepth - cDepth;
-				float px[] = { cX*(j - halfX - size)*xDepth, cY*(i - halfY)*xDepth, xDepth };
-				float py[] = { cX*(j - halfX)*yDepth, cY*(i - halfY - size)*yDepth, yDepth };
+				float px[] = { cX*(j - halfX - size)*xDepth, cY*(i - halfY)*xDepth, (float)xDepth };
+				float py[] = { cX*(j - halfX)*yDepth, cY*(i - halfY - size)*yDepth, (float)yDepth };
 
 				// cX*(5*z +j*(z-z2));
 				float v1[] = { pc[0] - px[0], pc[1] - px[1], pc[2] - px[2] };
@@ -422,7 +424,7 @@ inline  void generateNormals_FromDepthInv(const uint16_t *depth, const int width
 			if (!depth[i * width + j])
 				continue;
 			const auto cDepth = static_cast<float>(UINT16_MAX) / depth[i * width + j];
-			float pc[] = { cX*(j - halfX)*cDepth, cY*(i - halfY)*cDepth, cDepth };
+			float pc[] = { cX*(j - halfX)*cDepth, cY*(i - halfY)*cDepth, (float)cDepth };
 			float outNorm[3] = { 0, 0, 0 };
 			int count = 0;
 
@@ -431,8 +433,8 @@ inline  void generateNormals_FromDepthInv(const uint16_t *depth, const int width
 				const auto yDepth = static_cast<float>(UINT16_MAX) / depth[(i + size) * width + j];
 				const auto diffXZ = xDepth - cDepth;
 				const auto diffYZ = yDepth - cDepth;
-				float px[] = { cX*(j - halfX + size)*xDepth, cY*(i - halfY)*xDepth, xDepth };
-				float py[] = { cX*(j - halfX)*yDepth, cY*(i - halfY + size)*yDepth, yDepth };
+				float px[] = { cX*(j - halfX + size)*xDepth, cY*(i - halfY)*xDepth, (float)xDepth };
+				float py[] = { cX*(j - halfX)*yDepth, cY*(i - halfY + size)*yDepth, (float)yDepth };
 
 				// cX*(5*z +j*(z-z2));
 				float v1[] = { px[0] - pc[0], px[1] - pc[1], px[2] - pc[2] };
@@ -452,8 +454,8 @@ inline  void generateNormals_FromDepthInv(const uint16_t *depth, const int width
 				const auto yDepth = static_cast<float>(UINT16_MAX) / depth[(i + size) * width + j];
 				const auto diffXZ = xDepth - cDepth;
 				const auto diffYZ = yDepth - cDepth;
-				float px[] = { cX*(j - halfX - size)*xDepth, cY*(i - halfY)*xDepth, xDepth };
-				float py[] = { cX*(j - halfX)*yDepth, cY*(i - halfY + size)*yDepth, yDepth };
+				float px[] = { cX*(j - halfX - size)*xDepth, cY*(i - halfY)*xDepth, (float)xDepth };
+				float py[] = { cX*(j - halfX)*yDepth, cY*(i - halfY + size)*yDepth, (float)yDepth };
 
 				// cX*(5*z +j*(z-z2));
 				float v1[] = { pc[0] - px[0], pc[1] - px[1], pc[2] - px[2] };
@@ -472,8 +474,8 @@ inline  void generateNormals_FromDepthInv(const uint16_t *depth, const int width
 				const auto yDepth = static_cast<float>(UINT16_MAX) / depth[(i - size) * width + j];
 				const auto diffXZ = xDepth - cDepth;
 				const auto diffYZ = yDepth - cDepth;
-				float px[] = { cX*(j - halfX + size)*xDepth, cY*(i - halfY)*xDepth, xDepth };
-				float py[] = { cX*(j - halfX)*yDepth, cY*(i - halfY - size)*yDepth, yDepth };
+				float px[] = { cX*(j - halfX + size)*xDepth, cY*(i - halfY)*xDepth, (float)xDepth };
+				float py[] = { cX*(j - halfX)*yDepth, cY*(i - halfY - size)*yDepth, (float)yDepth };
 
 				// cX*(5*z +j*(z-z2));
 				float v1[] = { px[0] - pc[0], px[1] - pc[1], px[2] - pc[2] };
@@ -492,8 +494,8 @@ inline  void generateNormals_FromDepthInv(const uint16_t *depth, const int width
 				const auto yDepth = static_cast<float>(UINT16_MAX) / depth[(i - size) * width + j];
 				const auto diffXZ = xDepth - cDepth;
 				const auto diffYZ = yDepth - cDepth;
-				float px[] = { cX*(j - halfX - size)*xDepth, cY*(i - halfY)*xDepth, xDepth };
-				float py[] = { cX*(j - halfX)*yDepth, cY*(i - halfY - size)*yDepth, yDepth };
+				float px[] = { cX*(j - halfX - size)*xDepth, cY*(i - halfY)*xDepth, (float)xDepth };
+				float py[] = { cX*(j - halfX)*yDepth, cY*(i - halfY - size)*yDepth, (float)yDepth };
 
 				// cX*(5*z +j*(z-z2));
 				float v1[] = { pc[0] - px[0], pc[1] - px[1], pc[2] - px[2] };
@@ -602,7 +604,6 @@ inline void generateNormals_fromPoints(const float *points, const int width, con
 		}
 	}
 }
-
 template <
 	template <typename, typename> class Container,
 	typename Value,
@@ -616,7 +617,7 @@ template <
 	//}
 	return ret;
 }
-
+/*
 template <
 	template <typename, typename> class Container,
 	typename Value,
@@ -632,7 +633,7 @@ template <
 	//}
 	return ret;
 }
-
+*/
 static std::array<uint8_t, 3> HsvToRgb(std::array<uint8_t, 3> hsv)
 {
 	std::array<uint8_t, 3> rgb;

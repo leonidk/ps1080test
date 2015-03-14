@@ -12,6 +12,31 @@
 #include <cstdint>
 #include <cmath>
 
+
+template <typename T>
+inline T square(const T a) {
+	return a * a;
+}
+
+inline float sqrNorm(const float *a, const float *b) {
+	return square(a[0] - b[0]) + square(a[1] - b[1]) + square(a[2] - b[2]);
+}
+
+inline void cross(const float *a, const float *b, float *c) {
+	c[0] = (a[1] * b[2]) - (a[2] * b[1]);
+	c[1] = (a[2] * b[0]) - (a[0] * b[2]);
+	c[2] = (a[0] * b[1]) - (a[1] * b[0]);
+}
+inline float dot(const float *a, const float *b) {
+	return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+}
+inline void normalize(float *a) {
+	const auto norm = sqrt(dot(a, a));
+	a[0] /= norm;
+	a[1] /= norm;
+	a[2] /= norm;
+}
+
 namespace linalg
 {
 	/////////////////////
@@ -142,22 +167,6 @@ namespace linalg
 	template<class T, int M> bool operator == (const mat<T, M, 3> & l, const mat<T, M, 3> & r) { return l.x == r.x && l.y == r.y && l.z == r.z; }
 	template<class T, int M> bool operator == (const mat<T, M, 4> & l, const mat<T, M, 4> & r) { return l.x == r.x && l.y == r.y && l.z == r.z && l.w == r.w; }
 	template<class T> bool operator != (const T & l, const T & r) { return !(l == r); }
-
-	// Ordering operators return a vector or matrix of bools, by comparing componentwise pairs
-	template<class L, class R> comp_t<L, R> operator <  (const L & l, const R & r) { return zip<comp_t<L, R>>(l, r, [](elem_t<L> a, elem_t<R> b) { return a <  b; }); }
-	template<class L, class R> comp_t<L, R> operator <= (const L & l, const R & r) { return zip<comp_t<L, R>>(l, r, [](elem_t<L> a, elem_t<R> b) { return a <= b; }); }
-	template<class L, class R> comp_t<L, R> operator >(const L & l, const R & r) { return zip<comp_t<L, R>>(l, r, [](elem_t<L> a, elem_t<R> b) { return a >  b; }); }
-	template<class L, class R> comp_t<L, R> operator >= (const L & l, const R & r) { return zip<comp_t<L, R>>(l, r, [](elem_t<L> a, elem_t<R> b) { return a >= b; }); }
-
-	// Arithmetic and bitwise binary operators return a vector or matrix of the original type, by applying the operator to componentwise pairs
-	template<class L, class R> arith_t<L, R> operator + (const L & l, const R & r) { return zip<arith_t<L, R>>(l, r, [](elem_t<L> a, elem_t<R> b) { return a + b; }); }
-	template<class L, class R> arith_t<L, R> operator - (const L & l, const R & r) { return zip<arith_t<L, R>>(l, r, [](elem_t<L> a, elem_t<R> b) { return a - b; }); }
-	template<class L, class R> arith_t<L, R> operator * (const L & l, const R & r) { return zip<arith_t<L, R>>(l, r, [](elem_t<L> a, elem_t<R> b) { return a*b; }); }
-	template<class L, class R> arith_t<L, R> operator / (const L & l, const R & r) { return zip<arith_t<L, R>>(l, r, [](elem_t<L> a, elem_t<R> b) { return a / b; }); }
-	template<class L, class R> arith_t<L, R> operator % (const L & l, const R & r) { return zip<arith_t<L, R>>(l, r, [](elem_t<L> a, elem_t<R> b) { return a%b; }); }
-	template<class L, class R> arith_t<L, R> operator | (const L & l, const R & r) { return zip<arith_t<L, R>>(l, r, [](elem_t<L> a, elem_t<R> b) { return a | b; }); }
-	template<class L, class R> arith_t<L, R> operator & (const L & l, const R & r) { return zip<arith_t<L, R>>(l, r, [](elem_t<L> a, elem_t<R> b) { return a&b; }); }
-	template<class L, class R> arith_t<L, R> operator ^ (const L & l, const R & r) { return zip<arith_t<L, R>>(l, r, [](elem_t<L> a, elem_t<R> b) { return a^b; }); }
 
 	// Assignment operators are defined trivially
 	template<class L, class R> L & operator += (L & l, const R & r) { return l = l + r; }
@@ -323,8 +332,6 @@ namespace linalg
 	// Functional helpers //
 	////////////////////////
 
-	// Form a vector or matrix by applying function f to each element of vector or matrix v
-	template<class T, class F> T map(const T & v, F f) { return zip<T>(v, elem_t<T>(), [f](elem_t<T> a, elem_t<T>) { return f(a); }); }
 
 	// Form a scalar by applying function f to adjacent components of vector or matrix v
 	template<class T, class F> T reduce(const vec<T, 2> & v, F f) { return f(v.x, v.y); }
@@ -354,6 +361,25 @@ namespace linalg
 	template<class U, class T, int M, class F> U zip(const T & l, const mat<T, M, 3> & r, F f) { typedef typename U::C C; return{ zip<C>(l, r.x, f), zip<C>(l, r.y, f), zip<C>(l, r.z, f) }; }
 	template<class U, class T, int M, class F> U zip(const T & l, const mat<T, M, 4> & r, F f) { typedef typename U::C C; return{ zip<C>(l, r.x, f), zip<C>(l, r.y, f), zip<C>(l, r.z, f), zip<C>(l, r.w, f) }; }
 
+	// Form a vector or matrix by applying function f to each element of vector or matrix v
+	template<class T, class F> T map(const T & v, F f) { return zip<T>(v, elem_t<T>(), [f](elem_t<T> a, elem_t<T>) { return f(a); }); }
+
+	// Ordering operators return a vector or matrix of bools, by comparing componentwise pairs
+	template<class L, class R> comp_t<L, R> operator <  (const L & l, const R & r) { return zip<comp_t<L, R>>(l, r, [](elem_t<L> a, elem_t<R> b) { return a <  b; }); }
+	template<class L, class R> comp_t<L, R> operator <= (const L & l, const R & r) { return zip<comp_t<L, R>>(l, r, [](elem_t<L> a, elem_t<R> b) { return a <= b; }); }
+	template<class L, class R> comp_t<L, R> operator >(const L & l, const R & r) { return zip<comp_t<L, R>>(l, r, [](elem_t<L> a, elem_t<R> b) { return a >  b; }); }
+	template<class L, class R> comp_t<L, R> operator >= (const L & l, const R & r) { return zip<comp_t<L, R>>(l, r, [](elem_t<L> a, elem_t<R> b) { return a >= b; }); }
+
+	// Arithmetic and bitwise binary operators return a vector or matrix of the original type, by applying the operator to componentwise pairs
+	template<class L, class R> arith_t<L, R> operator + (const L & l, const R & r) { return zip<arith_t<L, R>>(l, r, [](elem_t<L> a, elem_t<R> b) { return a + b; }); }
+	template<class L, class R> arith_t<L, R> operator - (const L & l, const R & r) { return zip<arith_t<L, R>>(l, r, [](elem_t<L> a, elem_t<R> b) { return a - b; }); }
+	template<class L, class R> arith_t<L, R> operator * (const L & l, const R & r) { return zip<arith_t<L, R>>(l, r, [](elem_t<L> a, elem_t<R> b) { return a*b; }); }
+	template<class L, class R> arith_t<L, R> operator / (const L & l, const R & r) { return zip<arith_t<L, R>>(l, r, [](elem_t<L> a, elem_t<R> b) { return a / b; }); }
+	template<class L, class R> arith_t<L, R> operator % (const L & l, const R & r) { return zip<arith_t<L, R>>(l, r, [](elem_t<L> a, elem_t<R> b) { return a%b; }); }
+	template<class L, class R> arith_t<L, R> operator | (const L & l, const R & r) { return zip<arith_t<L, R>>(l, r, [](elem_t<L> a, elem_t<R> b) { return a | b; }); }
+	template<class L, class R> arith_t<L, R> operator & (const L & l, const R & r) { return zip<arith_t<L, R>>(l, r, [](elem_t<L> a, elem_t<R> b) { return a&b; }); }
+	template<class L, class R> arith_t<L, R> operator ^ (const L & l, const R & r) { return zip<arith_t<L, R>>(l, r, [](elem_t<L> a, elem_t<R> b) { return a^b; }); }
+	
 	/////////////////////////
 	// Convenience aliases //
 	/////////////////////////
