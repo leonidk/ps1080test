@@ -12,7 +12,7 @@
 [Dd]ebugPublic/
 [Rr]elease/
 [Rr]eleases/
-msvc/deps/
+msvc/deps/*
 x64/
 x86/
 build/
