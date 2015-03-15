@@ -40,7 +40,7 @@ which are just extracted versions of the zip files from the websites
 * I'm using the amazingly convenient [Generic Makefile](https://github.com/mbcrawfo/GenericMakefile).
 * It has all the dependencies specified through pkg-config, see line 11 of the Makefile. 
 Install them through your distribution's package manager.
- * On Ubuntu: _sudo apt-get install libopenni2-dev libsdl2-dev libglew-dev libeigen3-dev
+ * On Ubuntu: _sudo apt-get install libopenni2-dev libsdl2-dev libglew-dev libeigen3-dev_
 * Type _make_ in the top-level-directory. _make debug_ also works. This'll build everything and make a symlink to ./ps1080.
 * Run via ./ps1080
 
