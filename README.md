@@ -41,6 +41,11 @@ which are just extracted versions of the zip files from the websites
 * It has all the dependencies specified through pkg-config, see line 11 of the Makefile. 
 Install them through your distribution's package manager.
  * On Ubuntu: _sudo apt-get install libopenni2-dev libsdl2-dev libglew-dev libeigen3-dev_
+ * On Fedora: _su -c 'yum install SDL2-devel glew-devel eigen3-devel'_ 
+Unfortunately, [Fedora lacks an OpenNI2 pkg](https://bugzilla.redhat.com/show_bug.cgi?id=1060920),
+and the default OpenNI2 Linux installer doesn't include a pkg-config file. 
+[Debian maintainers have one](https://github.com/atuleu/debian-openni2/blob/master/debian/libopenni2.pc), 
+but its Include directory has to be changed manually if used with the OpenNI2 install script. 
 * Type _make_ in the top-level-directory. _make debug_ also works. This'll build everything and make a symlink to ./ps1080.
 * Run via ./ps1080
 
