@@ -8,7 +8,7 @@ SRC_EXT = cpp
 # Path to the source directory, relative to the makefile
 SRC_PATH = ./src
 # Space-separated pkg-config libraries used by this project
-LIBS = eigen3 libopenni2 sdl2 SDL2_image glew
+LIBS = eigen3 libopenni2 sdl2 glew
 # General compiler flags
 COMPILE_FLAGS = -std=c++11 -Wall -Wextra -g
 #COMPILE_FLAGS = -std=c++11 -g -w  
