@@ -2,9 +2,10 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ImportGroup Label="PropertySheets" />
    <PropertyGroup Label="UserMacros">
-    <GLEW_PATH>C:/Users/nid/usr/glew</GLEW_PATH>
-    <SDL_PATH>C:\Users\nid\usr\SDL2</SDL_PATH>
-	<EIGEN_PATH>C:/Users/nid/usr/eigen</EIGEN_PATH>
+    <DEPS_PATH>$(SolutionDir)/deps/</DEPS_PATH>
+    <GLEW_PATH>$(DEPS_PATH)/glew</GLEW_PATH>
+    <SDL_PATH>$(DEPS_PATH)/SDL2</SDL_PATH>
+	<EIGEN_PATH>$(DEPS_PATH)/eigen</EIGEN_PATH>
   </PropertyGroup>
   <PropertyGroup />
   <ItemDefinitionGroup />
