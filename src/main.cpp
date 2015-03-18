@@ -11,8 +11,102 @@
 
 #define SUBSAMPLE_FACTOR (4)
 #define DIST_THRESH (40)
-
+using namespace linalg::aliases;
+int3 hashCoeff;
+unsigned int collisions = 0;
+namespace detail {
+	struct VoxelCandidate {
+		int3 pos = { 0, 0, 0 };
+		float3 sum = { 0, 0, 0 };
+		int cnt = 0;
+	};
+}
+//must be a power of two
+template <int numVoxels>
+void voxelSubsample(const std::vector<float3> & input, std::vector<float3> &output, float voxelSize, int minVoxelNum)
+{
+	using detail::VoxelCandidate;
+	VoxelCandidate cand[numVoxels];
+	auto voxelMask = numVoxels - 1;
+	auto iVS = 1.0f / voxelSize; //inverse voxel size
+	//auto hashCoeff = int3(3863,2029,49139); //good for mm
+	//auto hashCoeff = int3(54851,11909,24781); //good for m
+	for (const auto & pt : input) {
+		//not using floor since floor would map (-1,1) to 0. 
+		int3 intPos(static_cast<int>(pt.x*iVS), static_cast<int>(pt.y*iVS), static_cast<int>(pt.z*iVS));
+		unsigned int hash = dot(hashCoeff, intPos);
+		hash&=voxelMask;
+		auto & bucket = cand[hash];
+		if (bucket.cnt && bucket.pos != intPos) { //flush on collision
+			bucket.cnt = 0;
+			bucket.sum = { 0, 0, 0 };
+			collisions++;
+		}
+		if (!bucket.cnt) {
+			bucket.pos = intPos;
+		}
+		bucket.sum += pt;
+		bucket.cnt++;
+	}
+	for (const auto &pt : cand)
+	{
+		if (pt.cnt >= minVoxelNum)
+			output.emplace_back(pt.sum / static_cast<float>(pt.cnt));
+	}
+}
+//must be a power of two
+template <int numVoxels>
+std::vector<float3> voxelSubsample(const std::vector<float3> & input, float voxelSize, int minVoxelNum)
+{
+	std::vector<float3> output;
+	voxelSubsample<numVoxels>(input, output, voxelSize, minVoxelNum);
+	return output;
+}
+#include <random>
 int main(int argc, char *args[]) {
+	std::random_device rd;
+	std::default_random_engine rng(rd());
+	std::uniform_int_distribution<> rp(0, 6492);
+	std::uniform_int_distribution<> depthStart(500, 1500);
+	std::uniform_int_distribution<> depthRang(0, 170);
+	std::vector<int3> oldHashes = { { 7171, 3079, 4231 }, { 12799, 13241, 29947 }, { 7127, 19891, 11159 }, { 44281, 4517, 30851 }, 
+	{ 12373, 42293, 8999 }, { 56599, 11399, 33359 }, { 7723, 13241, 53717 }, { 3863, 49139, 2029 }, { 3863, 2029, 49139 }, { 54851, 11909, 24781 } };
+	int3 bstCoeff;
+	int bstColl = INT_MAX;
+	int hashCnt = 0;
+	while (true) {
+		if (hashCnt < oldHashes.size())
+			hashCoeff = oldHashes[hashCnt++];
+		else
+			hashCoeff = int3(primes[rp(rng)], primes[rp(rng)], primes[rp(rng)]);
+		collisions = 0;
+		for (int iter = 0; iter < 25; iter++){
+			std::vector<float3> depth, subsample;
+			auto start = depthStart(rng);
+			for (int y = 0; y < 480; y++){
+				for (int x = 0; x < 640; x++) {
+					auto z = (start + depthRang(rng));
+					depth.emplace_back((x - 320.0f)*z / 480.0f, (x - 240)*z / 480.0f, z);
+				}
+			}
+			voxelSubsample<1024>(depth, subsample, 10.0f, 1);
+		}
+		if (collisions < bstColl) {
+			bstColl = collisions;
+			bstCoeff = hashCoeff;
+			std::cout << "\n" << hashCoeff[0] << ',' << hashCoeff[1] << ',' << hashCoeff[2] << std::endl;
+			std::cout << collisions << '\n' << std::endl;
+		}
+		else {
+			if (hashCnt < oldHashes.size()) {
+				std::cout << "\n" << hashCoeff[0] << ',' << hashCoeff[1] << ',' << hashCoeff[2] << std::endl;
+				std::cout << collisions << '\n' << std::endl;
+			}
+			else {
+				std::cout << ".";
+			}
+		}
+	}
 
 	SDL_Init(SDL_INIT_EVERYTHING);
 
