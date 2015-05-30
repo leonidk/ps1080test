@@ -1,12 +1,12 @@
 #include "ONICamera.h"
 #include "ImageFunc.h"
 #include "ICP.h"
-#include "Drawing.h"
+//#include "Drawing.h"
 #include "detect.h"
 #include "detectMS.h"
 
-#define GLEW_STATIC
-#include <GL/glew.h>
+//#define GLEW_STATIC
+//#include <GL/glew.h>
 //#include "argh.h"
 
 #define SUBSAMPLE_FACTOR (4)
@@ -14,18 +14,18 @@
 
 int main(int argc, char *args[]) {
 
-	SDL_Init(SDL_INIT_EVERYTHING);
+	//SDL_Init(SDL_INIT_EVERYTHING);
 
 	int posX = 100, posY = 100, width = 320, height = 240;
 	uint16_t *hDepth = new uint16_t[width * height];
 	width /= SUBSAMPLE_FACTOR;
 	height /= SUBSAMPLE_FACTOR;
 
-	Draw2DImage depthWin("Depth", posX, posY, width, height, 8);
-	Draw2DImage planesWin("PlanesColor", posX, posY, width, height, 8);
-	Draw2DImage normalWin("Normals", posX + width * 8, posY, width, height, 8);
-	Draw2DImage visWin("Planes", posX + width * 2 * 8, posY, 31, 31, 15); 
-	Draw3DImage glTest("OpenGLWindow", posX, posY + height * 8, width, height, 8, Draw3DImage::DRAW_MODE_POINTS);
+	//Draw2DImage depthWin("Depth", posX, posY, width, height, 8);
+	//Draw2DImage planesWin("PlanesColor", posX, posY, width, height, 8);
+	//Draw2DImage normalWin("Normals", posX + width * 8, posY, width, height, 8);
+	//Draw2DImage visWin("Planes", posX + width * 2 * 8, posY, 31, 31, 15); 
+	//Draw3DImage glTest("OpenGLWindow", posX, posY + height * 8, width, height, 8, Draw3DImage::DRAW_MODE_POINTS);
 
 
 	std::vector<float> points(3 * width * height, 0);
@@ -79,36 +79,36 @@ int main(int argc, char *args[]) {
 			}
 		}
 		////visualize output
-		depthWin.setGrayScale<4>(hDepth);
-		normalWin.setNormals(normals.data());
-		visWin.setGrayScale<1>(pd.getDebugImg());
-		planesWin.setRGBA (planeDebugImage_Color.data());
-		glTest.setPoints(points.data(), normals.data(), nullptr,false);
+		//depthWin.setGrayScale<4>(hDepth);
+		//normalWin.setNormals(normals.data());
+		//visWin.setGrayScale<1>(pd.getDebugImg());
+		//planesWin.setRGBA (planeDebugImage_Color.data());
+		//glTest.setPoints(points.data(), normals.data(), nullptr,false);
 		//figure out which plane came from where
 		//auto corrPairs = generateCorrespondencesSVD(candidates, prevPlanes);
 		//auto corrPairs2 = generateCorrespondencesMP(candidates, prevPlanes);
-		//auto transform = icp.runICPIter(10, fx, fy, 0.5, 15, 100, points.data(), normals.data(), pointsPrev.data(), normalsPrev.data());
+		auto transform = icp.runICPIter(10, fx, fy, 0.5, 15, 100, points.data(), normals.data(), pointsPrev.data(), normalsPrev.data());
 		//std::cout << transform << std::endl;
 		//save frame state
 		prevPlanes = candidates;
 		normalsPrev = normals;
 		pointsPrev = points;
 
-		SDL_Event e;
-		while (SDL_PollEvent(&e)){
-			if (e.type == SDL_QUIT)
-				quit = true;
-			if (e.type == SDL_KEYUP)
-				if (e.key.keysym.sym == SDLK_ESCAPE)
-					quit = true;
-			glTest.handleEvent(e);
-		}
-		depthWin.Draw();
-		normalWin.Draw();
-		visWin.Draw();
-		planesWin.Draw();
-		glTest.Draw();
+		//SDL_Event e;
+		//while (SDL_PollEvent(&e)){
+		//	if (e.type == SDL_QUIT)
+		//		quit = true;
+		//	if (e.type == SDL_KEYUP)
+		//		if (e.key.keysym.sym == SDLK_ESCAPE)
+		//			quit = true;
+		//	glTest.handleEvent(e);
+		//}
+		//depthWin.Draw();
+		//normalWin.Draw();
+		//visWin.Draw();
+		//planesWin.Draw();
+		//glTest.Draw();
 	}
-	SDL_Quit();
+	//SDL_Quit();
 	return 0;
 }

@@ -139,11 +139,80 @@ Eigen::Matrix4f computeLinearApproxICP(
 				b[4] += normalsDst[3 * idx + 1] * diff;
 				b[5] += normalsDst[3 * idx + 2] * diff;
 			}
+#define I_DONT_LIKE_EIGEN
+#ifdef I_DONT_LIKE_EIGEN
+			//equiv to LLT from Eigen. Adapted from dlib
+			float L[6 * 6] = { 0 };
+			float LT[6 * 6] = { 0 };
+
+			float z[6] = { 0 };
+
+			float xA[6] = { 0 };
+
+			const float eps = 1e-3;
+			bool isspd = true;
+
+			// Main loop.
+			for (int j = 0; j < 6; j++)	{
+				float d(0.0);
+				for (int k = 0; k < j; k++)	{
+					float s(0.0);
+					for (int i = 0; i < k; i++)	{
+						s += L[6*k+ i]*L[6*j+i];
+					}
+
+					// if L_(k,k) != 0
+					if (std::abs(L[6*k+k]) > eps)
+					{
+						s = (A[j * 6 + k] - s) / L[k * 6 + k];
+					} else	{
+						s = (A[j * 6 + k] - s);
+						isspd = false;
+					}
+					L[j*6+k] = s;
+					d = d + s*s;
+					// this is approximately doing: isspd = isspd && ( A(k,j) == A(j,k))
+					isspd = isspd && (std::abs(A[k*6+j] - A[j*6+k]) < eps);
+				}
+				d = A[j*6+j] - d;
+				isspd = isspd && (d > eps);
+				L[j*6+j] = sqrt(d > 0.0 ? d : 0.0);
+				for (int k = j + 1; k < 6; k++)
+				{
+					L[j*6+ k] = 0.0;
+				}
+			}
+			//forw sub
+			for (int i = 0; i < 6; i++)	{
+				z[i] = b[i];
+				for (int j = 0; j < i; j++)
+				{
+					z[i] -= L[i * 6 + j] * z[j];
+				}
+				z[i] /= L[i*6+i];
+			}
+
+			//transpose
+			for (int i = 0; i < 6; i++) {
+				for (int j = 0; j < 6; j++) {
+					LT[i * 6 + j] = L[j * 6 + i];
+				}
+			}
+
+			//back sub
+			for (int i = 6 - 1; i >= 0; i--) {
+				xA[i] = z[i];
+				for (int j = i + 1; j < 6; j++)	{
+					xA[i] -= LT[i * 6 + j] * xA[j];
+				}
+				xA[i] /= LT[i * 6 + i];
+			}
+#endif
 			MatrixXf AMat = Map<MatrixXf, 0, InnerStride<0> >(A, 6, 6, InnerStride<0>());
 			VectorXf bMat = Map<VectorXf, 0, InnerStride<0> >(b, 6);
-			LDLT<MatrixXf> ch(AMat);
-
-			VectorXf x = ch.solve(-bMat);
+			LDLT<MatrixXf> ch(AMat); 
+			MatrixXf L2 = ch.matrixU();
+			VectorXf x = ch.solve(bMat);
 
 			//Matrix3f rotation;
 			//rotation << 1, x[0] * x[1] - x[2], x[0] * x[2] + x[1],

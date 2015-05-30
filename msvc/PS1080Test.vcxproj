@@ -55,37 +55,23 @@
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="props\Config.props" />
-    <Import Project="props\Eigen.props" />
-    <Import Project="props\OpenNI2.props" />
-    <Import Project="props\SDL2.props" />
-    <Import Project="props\GLEW.props" />
+    <Import Project="OpenNI2.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="props\Config.props" />
-    <Import Project="props\Eigen.props" />
-    <Import Project="props\OpenNI2.props" />
-    <Import Project="props\SDL2.props" />
-    <Import Project="props\GLEW.props" />
+    <Import Project="OpenNI2.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="props\Config.props" />
-    <Import Project="props\Eigen.props" />
-    <Import Project="props\OpenNI2.props" />
-    <Import Project="props\SDL2.props" />
-    <Import Project="props\GLEW.props" />
+    <Import Project="OpenNI2.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="props\Config.props" />
-    <Import Project="props\Eigen.props" />
-    <Import Project="props\OpenNI2.props" />
-    <Import Project="props\SDL2.props" />
-    <Import Project="props\GLEW.props" />
+    <Import Project="OpenNI2.props" />
   </ImportGroup>
-  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Label="UserMacros">
+    <NuGetPackageImportStamp>084e1d2f</NuGetPackageImportStamp>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
@@ -176,10 +162,6 @@
     <ClInclude Include="..\src\Camera.h" />
     <ClInclude Include="..\src\detect.h" />
     <ClInclude Include="..\src\detectMS.h" />
-    <ClInclude Include="..\src\Drawing.h" />
-    <ClInclude Include="..\src\Drawing3D_SDL.h" />
-    <ClInclude Include="..\src\Drawing2D_SDL.h" />
-    <ClInclude Include="..\src\Drawing2D_SDL_GL.h" />
     <ClInclude Include="..\src\ICP.h" />
     <ClInclude Include="..\src\ImageFunc.h" />
     <ClInclude Include="..\src\linalg.h" />
@@ -190,7 +172,21 @@
   <ItemGroup>
     <ClCompile Include="..\src\main.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
+    <Import Project="packages\glfw.redist.3.0.4.3\build\native\glfw.redist.targets" Condition="Exists('packages\glfw.redist.3.0.4.3\build\native\glfw.redist.targets')" />
+    <Import Project="packages\glfw.3.0.4.3\build\native\glfw.targets" Condition="Exists('packages\glfw.3.0.4.3\build\native\glfw.targets')" />
+    <Import Project="packages\Eigen.3.2.4\build\native\Eigen.targets" Condition="Exists('packages\Eigen.3.2.4\build\native\Eigen.targets')" />
   </ImportGroup>
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('packages\glfw.redist.3.0.4.3\build\native\glfw.redist.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\glfw.redist.3.0.4.3\build\native\glfw.redist.targets'))" />
+    <Error Condition="!Exists('packages\glfw.3.0.4.3\build\native\glfw.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\glfw.3.0.4.3\build\native\glfw.targets'))" />
+    <Error Condition="!Exists('packages\Eigen.3.2.4\build\native\Eigen.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\Eigen.3.2.4\build\native\Eigen.targets'))" />
+  </Target>
 </Project>
